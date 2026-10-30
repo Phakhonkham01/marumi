@@ -1,0 +1,150 @@
+'use client'
+
+import { useRouter } from 'next/navigation'
+import { useState } from 'react'
+import { TrashIcon } from '@/components/icons'
+import { errorMessage, slugify } from '@/lib/format'
+import { createClient } from '@/lib/supabase/client'
+import type { Category, DeviceModel } from '@/lib/types'
+
+function useMutation() {
+  const router = useRouter()
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  async function run(fn: () => PromiseLike<{ error: { message: string } | null }>) {
+    setBusy(true)
+    setError(null)
+    const { error } = await fn()
+    setBusy(false)
+    if (error) {
+      setError(errorMessage(error.message))
+      return false
+    }
+    router.refresh()
+    return true
+  }
+  return { busy, error, run }
+}
+
+export function CategoryEditor({ categories }: { categories: Category[] }) {
+  const { busy, error, run } = useMutation()
+  const [name, setName] = useState('')
+  const supabase = createClient()
+
+  return (
+    <section className="card space-y-3 p-4">
+      <h2 className="font-bold text-navy">ໝວດສິນຄ້າ</h2>
+      <ul className="divide-y divide-line text-sm">
+        {categories.map((c) => (
+          <li key={c.id} className="flex items-center gap-2 py-2">
+            <input
+              className="input py-1!"
+              defaultValue={c.name}
+              onBlur={(e) => {
+                const value = e.target.value.trim()
+                if (value && value !== c.name) run(() => supabase.from('categories').update({ name: value }).eq('id', c.id))
+              }}
+              aria-label="ຊື່ໝວດ"
+            />
+            <button
+              className="p-2 text-danger"
+              aria-label="ລຶບໝວດ"
+              onClick={() =>
+                confirm(`ລຶບໝວດ "${c.name}"? ສິນຄ້າໃນໝວດນີ້ຈະບໍ່ມີໝວດ`) &&
+                run(() => supabase.from('categories').delete().eq('id', c.id))
+              }
+            >
+              <TrashIcon size={18} />
+            </button>
+          </li>
+        ))}
+      </ul>
+      <form
+        className="flex gap-2"
+        onSubmit={async (e) => {
+          e.preventDefault()
+          const value = name.trim()
+          if (!value) return
+          const ok = await run(() =>
+            supabase.from('categories').insert({
+              name: value,
+              slug: `${slugify(value)}-${Date.now().toString(36).slice(-4)}`,
+              sort: categories.length + 1,
+            }),
+          )
+          if (ok) setName('')
+        }}
+      >
+        <input className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder="ໝວດໃໝ່" />
+        <button className="btn btn-primary btn-sm" disabled={busy}>
+          ເພີ່ມ
+        </button>
+      </form>
+      {error && <p className="text-sm text-danger">{error}</p>}
+    </section>
+  )
+}
+
+export function DeviceModelEditor({ models }: { models: DeviceModel[] }) {
+  const { busy, error, run } = useMutation()
+  const [brand, setBrand] = useState('iPhone')
+  const [name, setName] = useState('')
+  const supabase = createClient()
+  const brands = [...new Set(models.map((m) => m.brand))]
+
+  return (
+    <section className="card space-y-3 p-4">
+      <h2 className="font-bold text-navy">ລຸ້ນໂທລະສັບ / AirPods</h2>
+      <div className="space-y-2">
+        {brands.map((b) => (
+          <div key={b}>
+            <p className="mb-1 text-sm font-semibold">{b}</p>
+            <div className="flex flex-wrap gap-1.5">
+              {models
+                .filter((m) => m.brand === b)
+                .map((m) => (
+                  <span key={m.id} className="chip py-1! text-xs!">
+                    {m.name}
+                    <button
+                      aria-label={`ລຶບ ${m.name}`}
+                      className="text-danger"
+                      onClick={() => confirm(`ລຶບ ${m.name}?`) && run(() => supabase.from('device_models').delete().eq('id', m.id))}
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+            </div>
+          </div>
+        ))}
+      </div>
+      <form
+        className="flex gap-2"
+        onSubmit={async (e) => {
+          e.preventDefault()
+          if (!brand.trim() || !name.trim()) return
+          const ok = await run(() =>
+            supabase.from('device_models').insert({
+              brand: brand.trim(),
+              name: name.trim(),
+              sort: models.filter((m) => m.brand === brand.trim()).length + 1,
+            }),
+          )
+          if (ok) setName('')
+        }}
+      >
+        <input className="input w-32!" value={brand} onChange={(e) => setBrand(e.target.value)} list="brands" placeholder="ຍີ່ຫໍ້" />
+        <datalist id="brands">
+          {brands.map((b) => (
+            <option key={b} value={b} />
+          ))}
+        </datalist>
+        <input className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder="ເຊັ່ນ Galaxy S25" />
+        <button className="btn btn-primary btn-sm" disabled={busy}>
+          ເພີ່ມ
+        </button>
+      </form>
+      {error && <p className="text-sm text-danger">{error}</p>}
+    </section>
+  )
+}

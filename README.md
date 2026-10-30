@@ -1,36 +1,49 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Marumi Phonecase · ມາຣູມິໂຟນເຄສ
 
-## Getting Started
+ເວັບຮ້ານ + ລະບົບຫຼັງບ້ານ (Next.js 16 + Supabase)
 
-First, run the development server:
+- **ໜ້າຮ້ານ** `/` — ລາຍການສິນຄ້າ, ກອງຕາມລຸ້ນໂທລະສັບ, ຄົ້ນຫາ, ກະຕ່າ, ສັ່ງຊື້ (ບໍ່ຕ້ອງສະໝັກສະມາຊິກ)
+- **ຫຼັງບ້ານ** `/admin` — ສິນຄ້າ & ຮູບ, ສະຕັອກ (ຮັບເຂົ້າ/ປັບ + ປະຫວັດ), ອໍເດີອອນລາຍ, ຂາຍໜ້າຮ້ານ (POS), ລາຍງານກຳໄລ
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## ເລີ່ມຕົ້ນ
+
+1. ສ້າງໂປຣເຈັກໃນ [supabase.com](https://supabase.com) (ເລືອກ region Singapore)
+2. SQL Editor → ແລ່ນ `supabase/migrations/0001_init.sql`, `0002_payment_slips.sql` ແລ້ວ `supabase/seed.sql` (ຂໍ້ມູນຕົວຢ່າງ, ຂ້າມໄດ້)
+3. Authentication → Users → **Add user** (ອີເມວ + ລະຫັດຜ່ານ ຂອງເຈົ້າຂອງຮ້ານ) ແລ້ວແລ່ນ:
+
+   ```sql
+   insert into public.profiles (id, display_name, role)
+   select id, 'ເຈົ້າຂອງຮ້ານ', 'owner' from auth.users where email = 'owner@example.com';
+   ```
+
+4. ສຳເນົາ `.env.example` ເປັນ `.env.local` ແລະ ໃສ່ຄ່າຈາກ Project Settings → API
+5. `pnpm install && pnpm dev` → ເປີດ http://localhost:3000/admin
+
+### ເພີ່ມພະນັກງານ
+
+ສ້າງ user ໃນ Authentication ແລ້ວແລ່ນ (role `staff` ບໍ່ເຫັນຕົ້ນທຶນ/ກຳໄລ):
+
+```sql
+insert into public.profiles (id, display_name, role)
+select id, 'ຊື່ພະນັກງານ', 'staff' from auth.users where email = 'staff@example.com';
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## ກົດເກນທາງທຸລະກິດ
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| ເຫດການ | ສະຕັອກ |
+|---|---|
+| ລູກຄ້າສັ່ງອອນລາຍ | ກວດວ່າພໍ ແຕ່ **ຍັງບໍ່ຕັດ** (ສະຖານະ ລໍຖ້າຢືນຢັນ) |
+| ພະນັກງານກົດ “ຢືນຢັນ” | ຕັດສະຕັອກ + ບັນທຶກຕົ້ນທຶນ ນັບເປັນຍອດຂາຍ |
+| ຂາຍໜ້າຮ້ານ (POS) | ຕັດສະຕັອກທັນທີ, ສຳເລັດທັນທີ |
+| ຍົກເລີກອໍເດີທີ່ຢືນຢັນແລ້ວ | ຄືນສະຕັອກ |
+| ຮັບສິນຄ້າເຂົ້າພ້ອມຕົ້ນທຶນ | ຕົ້ນທຶນ = ສະເລ່ຍຖ່ວງນ້ຳໜັກ |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- ສະຕັອກປ່ຽນໄດ້ຜ່ານ RPC ເທົ່ານັ້ນ (trigger ກັນ) ທຸກການປ່ຽນແປງຢູ່ໃນ `stock_movements`
+- ລາຄາໃນອໍເດີອອນລາຍຄິດຈາກຖານຂໍ້ມູນສະເໝີ ບໍ່ເຊື່ອລາຄາຈາກ browser
+- ຕົ້ນທຶນເກັບແຍກ (`variant_costs`, `order_item_costs`) ສະເພາະ owner ອ່ານໄດ້
 
-## Learn More
+## Deploy
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Vercel: ແພັກເກດ Hobby ໃຊ້ສະເພາະງານບໍ່ແມ່ນການຄ້າ → ໃຊ້ Pro ຫຼື ໂຮສອື່ນ
+- ຕັ້ງ `NEXT_PUBLIC_SITE_URL` ເປັນໂດເມນຈິງ (ໃຊ້ໃນລິ້ງແຊຣ໌ Facebook)
+- Supabase → Authentication → URL Configuration → ໃສ່ໂດເມນ

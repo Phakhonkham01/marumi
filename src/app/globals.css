@@ -1,26 +1,139 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/* Palette taken from the Marumi logo: navy outline, dusty blue ring,
+   cream background, butter-yellow mascot, blush cheeks. */
+@theme {
+  --color-navy: #22396b;
+  --color-navy-soft: #3d5688;
+  --color-sky: #a9bddb;
+  --color-mist: #e8eef7;
+  --color-cream: #fffaf0;
+  --color-butter: #f7e2a6;
+  --color-butter-deep: #eccb6e;
+  --color-blush: #f1a99f;
+  --color-ink: #1d2b48;
+  --color-muted: #6b7a96;
+  --color-line: #dbe3ef;
+  --color-success: #2f8f6b;
+  --color-danger: #c8524a;
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  --font-sans: var(--font-lao), var(--font-latin), system-ui, sans-serif;
+  --font-display: var(--font-latin), var(--font-lao), system-ui, sans-serif;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --radius-card: 1.25rem;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-cream);
+  color: var(--color-ink);
+}
+
+/* Seigaiha (wave) pattern from the logo, used on hero and empty states. */
+.bg-waves {
+  background-color: var(--color-mist);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='28' viewBox='0 0 56 28'%3E%3Cg fill='none' stroke='%23c3d1e6' stroke-width='1.6'%3E%3Cpath d='M0 28a28 28 0 0 1 56 0M8 28a20 20 0 0 1 40 0M16 28a12 12 0 0 1 24 0M24 28a4 4 0 0 1 8 0'/%3E%3Cpath d='M-28 14a28 28 0 0 1 56 0M-20 14a20 20 0 0 1 40 0M-12 14a12 12 0 0 1 24 0M-4 14a4 4 0 0 1 8 0'/%3E%3Cpath d='M28 14a28 28 0 0 1 56 0M36 14a20 20 0 0 1 40 0M44 14a12 12 0 0 1 24 0M52 14a4 4 0 0 1 8 0'/%3E%3C/g%3E%3C/svg%3E");
+  background-size: 56px 28px;
+}
+
+@layer components {
+.card {
+  background: white;
+  border: 1.5px solid var(--color-line);
+  border-radius: var(--radius-card);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 999px;
+  padding: 0.65rem 1.25rem;
+  font-weight: 600;
+  transition: transform 0.1s, background-color 0.15s, opacity 0.15s;
+}
+.btn:active {
+  transform: scale(0.97);
+}
+.btn:disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+.btn-primary {
+  background: var(--color-navy);
+  color: white;
+}
+.btn-primary:hover {
+  background: var(--color-navy-soft);
+}
+.btn-butter {
+  background: var(--color-butter);
+  color: var(--color-navy);
+  border: 1.5px solid var(--color-navy);
+}
+.btn-butter:hover {
+  background: var(--color-butter-deep);
+}
+.btn-ghost {
+  background: white;
+  color: var(--color-navy);
+  border: 1.5px solid var(--color-line);
+}
+.btn-ghost:hover {
+  border-color: var(--color-sky);
+}
+.btn-danger {
+  background: white;
+  color: var(--color-danger);
+  border: 1.5px solid #efc9c5;
+}
+.btn-sm {
+  padding: 0.35rem 0.85rem;
+  font-size: 0.875rem;
+}
+
+.input {
+  width: 100%;
+  border-radius: 0.85rem;
+  border: 1.5px solid var(--color-line);
+  background: white;
+  padding: 0.6rem 0.85rem;
+  outline: none;
+}
+.input:focus {
+  border-color: var(--color-sky);
+  box-shadow: 0 0 0 3px var(--color-mist);
+}
+
+.label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 600;
+  margin-bottom: 0.35rem;
+  color: var(--color-navy);
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border-radius: 999px;
+  padding: 0.4rem 0.9rem;
+  border: 1.5px solid var(--color-line);
+  background: white;
+  white-space: nowrap;
+  font-size: 0.9rem;
+}
+.chip[data-active="true"] {
+  background: var(--color-navy);
+  border-color: var(--color-navy);
+  color: white;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  scrollbar-width: none;
+}
 }
