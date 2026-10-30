@@ -1,5 +1,5 @@
 -- Starter categories, phone models and a few products taken from the Facebook page.
--- Safe to edit or delete from /admin afterwards.
+-- Safe to edit or delete from /admin afterwards. Safe to re-run: existing rows are skipped.
 
 insert into public.categories (name, slug, sort) values
   ('ເຄສໂທລະສັບ', 'phone-cases', 1),
@@ -7,7 +7,8 @@ insert into public.categories (name, slug, sort) values
   ('ແບັດສຳຮອງ', 'power-banks', 3),
   ('ສາຍສາກ & ຫົວສາກ', 'chargers', 4),
   ('ຫູຟັງ', 'earphones', 5),
-  ('ສາຍຄ້ອງ & ພວງກະແຈ', 'straps', 6);
+  ('ສາຍຄ້ອງ & ພວງກະແຈ', 'straps', 6)
+on conflict (slug) do nothing;
 
 insert into public.device_models (brand, name, sort)
 select 'iPhone', m, ord
@@ -18,12 +19,14 @@ from unnest(array[
   'iPhone 15', 'iPhone 15 Plus', 'iPhone 15 Pro', 'iPhone 15 Pro Max',
   'iPhone 16', 'iPhone 16 Plus', 'iPhone 16 Pro', 'iPhone 16 Pro Max',
   'iPhone 17', 'iPhone 17 Air', 'iPhone 17 Pro', 'iPhone 17 Pro Max'
-]) with ordinality as t(m, ord);
+]) with ordinality as t(m, ord)
+on conflict (brand, name) do nothing;
 
 insert into public.device_models (brand, name, sort)
 select 'AirPods', m, ord
 from unnest(array['AirPods 2', 'AirPods 3', 'AirPods 4', 'AirPods Pro', 'AirPods Pro 2', 'AirPods Pro 3'])
-  with ordinality as t(m, ord);
+  with ordinality as t(m, ord)
+on conflict (brand, name) do nothing;
 
 with pb as (select id from public.categories where slug = 'power-banks')
 insert into public.products (category_id, name, slug, price_lak, specs, is_featured)
@@ -45,7 +48,9 @@ from pb, (values
    '[{"k":"ຄວາມຈຸ","v":"20000 mAh"},{"k":"ສາກໄວ","v":"45W"},{"k":"ມາດຕະຖານ","v":"ມອກ"}]', false),
   ('DUDAO K14', 'dudao-k14', 350000,
    '[{"k":"ຄວາມຈຸ","v":"10000 mAh"},{"k":"ສາກໄວ","v":"22.5W"},{"k":"ສາຍໃນຕົວ","v":"USB-C, Lightning"},{"k":"ມາດຕະຖານ","v":"CCC"}]', false)
-) as v(name, slug, price, specs, featured);
+) as v(name, slug, price, specs, featured)
+on conflict (slug) do nothing;
 
 insert into public.product_variants (product_id, name, stock)
-select id, 'ມາດຕະຖານ', 5 from public.products;
+select p.id, 'ມາດຕະຖານ', 5 from public.products p
+where not exists (select 1 from public.product_variants v where v.product_id = p.id);

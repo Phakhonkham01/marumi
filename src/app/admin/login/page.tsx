@@ -3,6 +3,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { useState } from 'react'
+import { useDialog } from '@/components/dialog'
 import { ArrowLeftIcon } from '@/components/icons'
 import { createClient } from '@/lib/supabase/client'
 
@@ -13,21 +14,20 @@ const LOGIN_ERRORS: Record<string, string> = {
 }
 
 export default function LoginPage() {
-  const [error, setError] = useState<string | null>(null)
+  const dialog = useDialog()
   const [pending, setPending] = useState(false)
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     const form = new FormData(e.currentTarget)
     setPending(true)
-    setError(null)
     const { error } = await createClient().auth.signInWithPassword({
       email: String(form.get('email')).trim(),
       password: String(form.get('password')),
     })
     if (error) {
       setPending(false)
-      setError(LOGIN_ERRORS[error.code ?? ''] ?? error.message)
+      dialog.alert({ tone: 'error', title: 'ເຂົ້າລະບົບບໍ່ສຳເລັດ', message: LOGIN_ERRORS[error.code ?? ''] ?? error.message })
       return
     }
     // Full page load so the new session cookie is sent and no cached
@@ -50,7 +50,6 @@ export default function LoginPage() {
           <label className="label" htmlFor="password">ລະຫັດຜ່ານ</label>
           <input id="password" name="password" type="password" className="input" required autoComplete="current-password" />
         </div>
-        {error && <p className="text-sm text-danger">{error}</p>}
         <button className="btn btn-primary w-full" disabled={pending}>
           {pending ? 'ກຳລັງເຂົ້າລະບົບ...' : 'ເຂົ້າລະບົບ'}
         </button>

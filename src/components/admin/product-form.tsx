@@ -3,6 +3,7 @@
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { useRef, useState } from 'react'
+import { useDialog } from '@/components/dialog'
 import { PlusIcon, TrashIcon, UploadIcon } from '@/components/icons'
 import { compressImage, extensionFor } from '@/lib/image'
 import { errorMessage, formatKip, imageUrl, slugify } from '@/lib/format'
@@ -40,9 +41,9 @@ export function ProductForm({
   isOwner: boolean
 }) {
   const router = useRouter()
+  const dialog = useDialog()
   const fileInput = useRef<HTMLInputElement>(null)
   const [saving, setSaving] = useState(false)
-  const [error, setError] = useState<string | null>(null)
 
   const [name, setName] = useState(product?.name ?? '')
   const [categoryId, setCategoryId] = useState<number | ''>(product?.category_id ?? categories[0]?.id ?? '')
@@ -122,13 +123,14 @@ export function ProductForm({
     })
   }
 
+  const missing = (message: string) => dialog.alert({ tone: 'warning', title: 'ຂໍ້ມູນຍັງບໍ່ຄົບ', message })
+
   async function onSave() {
-    setError(null)
     const basePrice = toInt(price)
-    if (!name.trim()) return setError('ກະລຸນາໃສ່ຊື່ສິນຄ້າ')
-    if (basePrice == null) return setError('ກະລຸນາໃສ່ລາຄາ')
-    if (variants.length === 0) return setError('ຕ້ອງມີຢ່າງໜ້ອຍ 1 ຕົວເລືອກ')
-    if (variants.some((v) => !v.name.trim())) return setError('ກະລຸນາໃສ່ຊື່ຕົວເລືອກໃຫ້ຄົບ')
+    if (!name.trim()) return missing('ກະລຸນາໃສ່ຊື່ສິນຄ້າ')
+    if (basePrice == null) return missing('ກະລຸນາໃສ່ລາຄາ')
+    if (variants.length === 0) return missing('ຕ້ອງມີຢ່າງໜ້ອຍ 1 ຕົວເລືອກ')
+    if (variants.some((v) => !v.name.trim())) return missing('ກະລຸນາໃສ່ຊື່ຕົວເລືອກໃຫ້ຄົບ')
 
     setSaving(true)
     const supabase = createClient()
@@ -211,29 +213,43 @@ export function ProductForm({
         router.refresh()
         setRemovedImages([])
         setSaving(false)
+        dialog.alert({ tone: 'success', title: 'ບັນທຶກສຳເລັດ', message: `ອັບເດດ "${payload.name}" ແລ້ວ` })
       } else {
         router.replace(`/admin/products/${productId}`)
+        dialog.alert({
+          tone: 'success',
+          title: 'ເພີ່ມສິນຄ້າສຳເລັດ',
+          message: `"${payload.name}" ຖືກເພີ່ມແລ້ວ ສາມາດປັບສະຕັອກ ແລະ ຮູບຕໍ່ໄດ້ໃນໜ້ານີ້`,
+        })
       }
     } catch (e) {
-      setError(errorMessage((e as Error).message))
       setSaving(false)
+      dialog.alert({ tone: 'error', title: 'ບັນທຶກບໍ່ສຳເລັດ', message: errorMessage((e as Error).message) })
     }
   }
 
   async function onDelete() {
-    if (!product || !confirm(`ລຶບ "${product.name}" ແທ້ບໍ? ຖ້າພຽງຢາກເຊົາຂາຍ ໃຫ້ປິດ "ສະແດງໃນໜ້າຮ້ານ" ແທນ`)) return
+    if (!product) return
+    const ok = await dialog.confirm({
+      title: `ລຶບ "${product.name}" ແທ້ບໍ?`,
+      message: 'ຖ້າພຽງຢາກເຊົາຂາຍ ໃຫ້ປິດ "ສະແດງໃນໜ້າຮ້ານ" ແທນ',
+      okLabel: 'ລຶບ',
+      danger: true,
+    })
+    if (!ok) return
     setSaving(true)
     const supabase = createClient()
     const paths = product.product_images.map((i) => i.path)
     const { error } = await supabase.from('products').delete().eq('id', product.id)
     if (error) {
-      setError(errorMessage(error.message))
       setSaving(false)
+      dialog.alert({ tone: 'error', title: 'ລຶບບໍ່ສຳເລັດ', message: errorMessage(error.message) })
       return
     }
     if (paths.length) await supabase.storage.from(IMAGE_BUCKET).remove(paths)
     router.replace('/admin/products')
     router.refresh()
+    dialog.alert({ tone: 'success', title: 'ລຶບສິນຄ້າແລ້ວ', message: `"${product.name}" ຖືກລຶບແລ້ວ` })
   }
 
   return (
@@ -439,8 +455,6 @@ export function ProductForm({
           <textarea id="description" className="input" rows={4} value={description} onChange={(e) => setDescription(e.target.value)} />
         </div>
       </section>
-
-      {error && <p className="rounded-xl bg-danger/10 px-4 py-3 text-sm text-danger">{error}</p>}
 
       <div className="sticky bottom-20 z-20 flex gap-2 md:bottom-4">
         <button className="btn btn-primary flex-1 shadow-lg" onClick={onSave} disabled={saving}>

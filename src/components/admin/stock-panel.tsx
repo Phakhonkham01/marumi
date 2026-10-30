@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
+import { useDialog } from '@/components/dialog'
 import { errorMessage, formatKip } from '@/lib/format'
 import { createClient } from '@/lib/supabase/client'
 import type { Variant } from '@/lib/types'
@@ -18,25 +19,26 @@ export function StockPanel({
   isOwner: boolean
 }) {
   const router = useRouter()
+  const dialog = useDialog()
   const [mode, setMode] = useState<Mode | null>(null)
   const [qty, setQty] = useState('')
   const [cost, setCost] = useState('')
   const [note, setNote] = useState('')
   const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
 
   function open(next: Mode, current: number) {
     setMode(next)
     setQty(next.kind === 'adjust' ? String(current) : '')
     setCost('')
     setNote('')
-    setError(null)
   }
 
   async function submit() {
     if (!mode) return
     const n = Number(qty)
-    if (!Number.isInteger(n) || n < 0 || (mode.kind === 'restock' && n < 1)) return setError('ຈຳນວນບໍ່ຖືກຕ້ອງ')
+    if (!Number.isInteger(n) || n < 0 || (mode.kind === 'restock' && n < 1)) {
+      return dialog.alert({ tone: 'warning', title: 'ຈຳນວນບໍ່ຖືກຕ້ອງ', message: 'ກະລຸນາໃສ່ຕົວເລກຈຳນວນເຕັມ' })
+    }
     setBusy(true)
     const supabase = createClient()
     const { error } =
@@ -49,9 +51,15 @@ export function StockPanel({
           })
         : await supabase.rpc('adjust_stock', { p_variant_id: mode.variantId, p_new_stock: n, p_note: note || null })
     setBusy(false)
-    if (error) return setError(errorMessage(error.message))
+    if (error) return dialog.alert({ tone: 'error', title: 'ບັນທຶກບໍ່ສຳເລັດ', message: errorMessage(error.message) })
+    const variantName = variants.find((v) => v.id === mode.variantId)?.name
     setMode(null)
     router.refresh()
+    dialog.alert(
+      mode.kind === 'restock'
+        ? { tone: 'success', title: 'ຮັບສິນຄ້າເຂົ້າແລ້ວ', message: `${variantName}: +${n} ຊິ້ນ` }
+        : { tone: 'success', title: 'ປັບສະຕັອກແລ້ວ', message: `${variantName}: ເຫຼືອ ${n} ຊິ້ນ` },
+    )
   }
 
   return (
@@ -91,7 +99,6 @@ export function StockPanel({
                   )}
                 </div>
                 <input className="input" value={note} onChange={(e) => setNote(e.target.value)} placeholder="ໝາຍເຫດ (ບໍ່ບັງຄັບ)" />
-                {error && <p className="text-danger">{error}</p>}
                 <div className="flex gap-2">
                   <button className="btn btn-primary btn-sm" onClick={submit} disabled={busy}>
                     ບັນທຶກ

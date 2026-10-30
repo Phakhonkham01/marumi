@@ -2,6 +2,7 @@
 
 import Image from 'next/image'
 import { useRef, useState } from 'react'
+import { useDialog } from '@/components/dialog'
 import { TrashIcon, UploadIcon } from '@/components/icons'
 import { compressImage, extensionFor } from '@/lib/image'
 import { createClient } from '@/lib/supabase/client'
@@ -13,12 +14,11 @@ export function SlipUpload({ onBusyChange }: { onBusyChange: (busy: boolean) => 
   const input = useRef<HTMLInputElement>(null)
   const [path, setPath] = useState<string | null>(null)
   const [preview, setPreview] = useState<string | null>(null)
+  const dialog = useDialog()
   const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
 
   async function onPick(file: File | undefined) {
     if (!file) return
-    setError(null)
     setBusy(true)
     onBusyChange(true)
     try {
@@ -29,7 +29,7 @@ export function SlipUpload({ onBusyChange }: { onBusyChange: (busy: boolean) => 
       setPath(name)
       setPreview(URL.createObjectURL(blob))
     } catch {
-      setError('ອັບໂຫຼດບິນບໍ່ສຳເລັດ ກະລຸນາລອງໃໝ່')
+      dialog.alert({ tone: 'error', title: 'ອັບໂຫຼດບິນບໍ່ສຳເລັດ', message: 'ກະລຸນາລອງໃໝ່ອີກຄັ້ງ' })
     } finally {
       setBusy(false)
       onBusyChange(false)
@@ -75,7 +75,6 @@ export function SlipUpload({ onBusyChange }: { onBusyChange: (busy: boolean) => 
           e.target.value = ''
         }}
       />
-      {error && <p className="mt-1 text-sm text-danger">{error}</p>}
     </div>
   )
 }

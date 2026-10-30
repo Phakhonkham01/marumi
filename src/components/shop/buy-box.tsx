@@ -1,8 +1,9 @@
 'use client'
 
 import Image from 'next/image'
-import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useState } from 'react'
+import { useDialog } from '@/components/dialog'
 import { ChatIcon, MinusIcon, PlusIcon } from '@/components/icons'
 import { formatKip, imageUrl, variantPrice, whatsappLink } from '@/lib/format'
 import type { Product, ProductImage, Variant } from '@/lib/types'
@@ -53,10 +54,11 @@ export function BuyBox({
   pageUrl: string
 }) {
   const { add, items } = useCart()
+  const router = useRouter()
+  const dialog = useDialog()
   const firstInStock = variants.find((v) => v.stock > 0) ?? variants[0]
   const [variantId, setVariantId] = useState(firstInStock?.id)
   const [qty, setQty] = useState(1)
-  const [added, setAdded] = useState(false)
 
   const variant = variants.find((v) => v.id === variantId)
   const price = variantPrice(product, variant)
@@ -64,8 +66,9 @@ export function BuyBox({
   const available = Math.max(0, (variant?.stock ?? 0) - inCart)
   const showPicker = variants.length > 1
 
-  function onAdd() {
+  async function onAdd() {
     if (!variant || available < 1) return
+    const count = Math.min(qty, available)
     add(
       {
         variantId: variant.id,
@@ -77,10 +80,17 @@ export function BuyBox({
         image: cover,
         stock: variant.stock,
       },
-      Math.min(qty, available),
+      count,
     )
     setQty(1)
-    setAdded(true)
+    const goToCart = await dialog.confirm({
+      tone: 'success',
+      title: 'ເພີ່ມໃສ່ກະຕ່າແລ້ວ',
+      message: `${product.name}${showPicker ? ` · ${variant.name}` : ''} × ${count}`,
+      okLabel: 'ໄປທີ່ກະຕ່າ',
+      cancelLabel: 'ເລືອກຊື້ຕໍ່',
+    })
+    if (goToCart) router.push('/cart')
   }
 
   const askText = `ສະບາຍດີ ສົນໃຈ ${product.name}${showPicker && variant ? ` (${variant.name})` : ''}\n${pageUrl}`
@@ -107,7 +117,6 @@ export function BuyBox({
                 onClick={() => {
                   setVariantId(v.id)
                   setQty(1)
-                  setAdded(false)
                 }}
                 disabled={v.stock === 0}
                 className="chip disabled:cursor-not-allowed disabled:opacity-40 disabled:line-through"
@@ -142,15 +151,6 @@ export function BuyBox({
           {available < 1 && inCart > 0 ? 'ຢູ່ໃນກະຕ່າຄົບແລ້ວ' : 'ໃສ່ກະຕ່າ'}
         </button>
       </div>
-
-      {added && (
-        <div className="flex items-center justify-between rounded-2xl bg-mist px-4 py-3 text-sm">
-          <span>✓ ເພີ່ມໃສ່ກະຕ່າແລ້ວ</span>
-          <Link href="/cart" className="font-semibold text-navy underline">
-            ໄປທີ່ກະຕ່າ
-          </Link>
-        </div>
-      )}
 
       <a href={whatsappLink(askText)} target="_blank" rel="noreferrer" className="btn btn-ghost w-full">
         <ChatIcon size={18} /> ສອບຖາມທາງ WhatsApp

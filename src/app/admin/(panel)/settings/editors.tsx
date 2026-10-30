@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
+import { useDialog } from '@/components/dialog'
 import { TrashIcon } from '@/components/icons'
 import { errorMessage, slugify } from '@/lib/format'
 import { createClient } from '@/lib/supabase/client'
@@ -9,25 +10,27 @@ import type { Category, DeviceModel } from '@/lib/types'
 
 function useMutation() {
   const router = useRouter()
+  const dialog = useDialog()
   const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  async function run(fn: () => PromiseLike<{ error: { message: string } | null }>) {
+  async function run(success: string, fn: () => PromiseLike<{ error: { message: string } | null }>) {
     setBusy(true)
-    setError(null)
     const { error } = await fn()
     setBusy(false)
     if (error) {
-      setError(errorMessage(error.message))
+      dialog.alert({ tone: 'error', title: 'ບັນທຶກບໍ່ສຳເລັດ', message: errorMessage(error.message) })
       return false
     }
     router.refresh()
+    dialog.alert({ tone: 'success', title: success })
     return true
   }
-  return { busy, error, run }
+  const confirmDelete = (title: string, message?: string) =>
+    dialog.confirm({ title, message, okLabel: 'ລຶບ', danger: true })
+  return { busy, run, confirmDelete }
 }
 
 export function CategoryEditor({ categories }: { categories: Category[] }) {
-  const { busy, error, run } = useMutation()
+  const { busy, run, confirmDelete } = useMutation()
   const [name, setName] = useState('')
   const supabase = createClient()
 
@@ -42,16 +45,16 @@ export function CategoryEditor({ categories }: { categories: Category[] }) {
               defaultValue={c.name}
               onBlur={(e) => {
                 const value = e.target.value.trim()
-                if (value && value !== c.name) run(() => supabase.from('categories').update({ name: value }).eq('id', c.id))
+                if (value && value !== c.name) run(`ປ່ຽນຊື່ເປັນ "${value}" ແລ້ວ`, () => supabase.from('categories').update({ name: value }).eq('id', c.id))
               }}
               aria-label="ຊື່ໝວດ"
             />
             <button
               className="p-2 text-danger"
               aria-label="ລຶບໝວດ"
-              onClick={() =>
-                confirm(`ລຶບໝວດ "${c.name}"? ສິນຄ້າໃນໝວດນີ້ຈະບໍ່ມີໝວດ`) &&
-                run(() => supabase.from('categories').delete().eq('id', c.id))
+              onClick={async () =>
+                (await confirmDelete(`ລຶບໝວດ "${c.name}"?`, 'ສິນຄ້າໃນໝວດນີ້ຈະບໍ່ມີໝວດ')) &&
+                run(`ລຶບໝວດ "${c.name}" ແລ້ວ`, () => supabase.from('categories').delete().eq('id', c.id))
               }
             >
               <TrashIcon size={18} />
@@ -65,7 +68,7 @@ export function CategoryEditor({ categories }: { categories: Category[] }) {
           e.preventDefault()
           const value = name.trim()
           if (!value) return
-          const ok = await run(() =>
+          const ok = await run(`ເພີ່ມໝວດ "${value}" ແລ້ວ`, () =>
             supabase.from('categories').insert({
               name: value,
               slug: `${slugify(value)}-${Date.now().toString(36).slice(-4)}`,
@@ -80,13 +83,12 @@ export function CategoryEditor({ categories }: { categories: Category[] }) {
           ເພີ່ມ
         </button>
       </form>
-      {error && <p className="text-sm text-danger">{error}</p>}
     </section>
   )
 }
 
 export function DeviceModelEditor({ models }: { models: DeviceModel[] }) {
-  const { busy, error, run } = useMutation()
+  const { busy, run, confirmDelete } = useMutation()
   const [brand, setBrand] = useState('iPhone')
   const [name, setName] = useState('')
   const supabase = createClient()
@@ -108,7 +110,10 @@ export function DeviceModelEditor({ models }: { models: DeviceModel[] }) {
                     <button
                       aria-label={`ລຶບ ${m.name}`}
                       className="text-danger"
-                      onClick={() => confirm(`ລຶບ ${m.name}?`) && run(() => supabase.from('device_models').delete().eq('id', m.id))}
+                      onClick={async () =>
+                        (await confirmDelete(`ລຶບ ${m.name}?`)) &&
+                        run(`ລຶບ ${m.name} ແລ້ວ`, () => supabase.from('device_models').delete().eq('id', m.id))
+                      }
                     >
                       ×
                     </button>
@@ -123,7 +128,7 @@ export function DeviceModelEditor({ models }: { models: DeviceModel[] }) {
         onSubmit={async (e) => {
           e.preventDefault()
           if (!brand.trim() || !name.trim()) return
-          const ok = await run(() =>
+          const ok = await run(`ເພີ່ມ ${name.trim()} ແລ້ວ`, () =>
             supabase.from('device_models').insert({
               brand: brand.trim(),
               name: name.trim(),
@@ -144,7 +149,6 @@ export function DeviceModelEditor({ models }: { models: DeviceModel[] }) {
           ເພີ່ມ
         </button>
       </form>
-      {error && <p className="text-sm text-danger">{error}</p>}
     </section>
   )
 }

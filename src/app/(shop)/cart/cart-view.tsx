@@ -4,6 +4,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useActionState, useEffect, useRef, useState } from 'react'
+import { useDialog } from '@/components/dialog'
 import { MinusIcon, PlusIcon, TrashIcon } from '@/components/icons'
 import { useCart, type CartItem } from '@/components/shop/cart'
 import { EmptyState } from '@/components/shop/product-card'
@@ -64,6 +65,7 @@ export function CartView() {
   const { items, ready, subtotal, setQty, remove, clear } = useCart()
   const notice = useRefreshCart()
   const router = useRouter()
+  const dialog = useDialog()
   const [delivery, setDelivery] = useState<'pickup' | 'delivery'>('pickup')
   const [payment, setPayment] = useState('transfer')
   const [uploading, setUploading] = useState(false)
@@ -73,8 +75,11 @@ export function CartView() {
     if (state.code) {
       clear()
       router.push(`/order/${state.code}`)
+      dialog.alert({ tone: 'success', title: 'ສັ່ງຊື້ສຳເລັດ', message: `ເລກອໍເດີ ${state.code} · ຮ້ານຈະຕິດຕໍ່ກັບໄປໄວໆນີ້` })
+    } else if (state.error) {
+      dialog.alert({ tone: 'error', title: 'ສັ່ງຊື້ບໍ່ສຳເລັດ', message: state.error })
     }
-  }, [state.code, clear, router])
+  }, [state, clear, router, dialog])
 
   if (!ready) return <div className="h-64 animate-pulse rounded-[var(--radius-card)] bg-mist" />
 
@@ -196,7 +201,6 @@ export function CartView() {
           <span className="text-muted">ລວມທັງໝົດ</span>
           <span className="text-xl font-bold text-navy">{formatKip(subtotal)}</span>
         </div>
-        {state.error && <p className="rounded-xl bg-danger/10 px-3 py-2 text-sm text-danger">{state.error}</p>}
         <button className="btn btn-primary w-full" disabled={pending || uploading}>
           {pending ? 'ກຳລັງສົ່ງ...' : 'ຢືນຢັນການສັ່ງຊື້'}
         </button>

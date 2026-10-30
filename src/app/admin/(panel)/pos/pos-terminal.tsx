@@ -4,6 +4,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
+import { useDialog } from '@/components/dialog'
 import { MinusIcon, PlusIcon, TrashIcon } from '@/components/icons'
 import { activeVariants, errorMessage, formatKip, imageUrl, sortedImages, variantPrice } from '@/lib/format'
 import { createClient } from '@/lib/supabase/client'
@@ -13,6 +14,7 @@ type Line = { variant: Variant; productName: string; qty: number; price: number 
 
 export function PosTerminal({ products }: { products: ProductWithRelations[] }) {
   const router = useRouter()
+  const dialog = useDialog()
   const [search, setSearch] = useState('')
   const [picking, setPicking] = useState<ProductWithRelations | null>(null)
   const [lines, setLines] = useState<Line[]>([])
@@ -20,7 +22,6 @@ export function PosTerminal({ products }: { products: ProductWithRelations[] }) 
   const [payment, setPayment] = useState<'cash' | 'transfer'>('cash')
   const [customer, setCustomer] = useState('')
   const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   const [done, setDone] = useState<string | null>(null)
 
   const term = search.trim().toLowerCase()
@@ -49,7 +50,7 @@ export function PosTerminal({ products }: { products: ProductWithRelations[] }) 
 
   async function checkout() {
     setBusy(true)
-    setError(null)
+    const total = subtotal - discountValue
     const { data, error } = await createClient().rpc('store_sale', {
       p_items: lines.map((l) => ({ variant_id: l.variant.id, qty: l.qty, unit_price_lak: l.price })),
       p_payment: payment,
@@ -57,7 +58,8 @@ export function PosTerminal({ products }: { products: ProductWithRelations[] }) 
       p_customer_name: customer || null,
     })
     setBusy(false)
-    if (error) return setError(errorMessage(error.message))
+    if (error) return dialog.alert({ tone: 'error', title: 'ບັນທຶກການຂາຍບໍ່ສຳເລັດ', message: errorMessage(error.message) })
+    dialog.alert({ tone: 'success', title: 'ບັນທຶກການຂາຍແລ້ວ', message: `ບິນ ${data} · ${formatKip(total)}` })
     setDone(data as string)
     setLines([])
     setDiscount('')
@@ -154,7 +156,6 @@ export function PosTerminal({ products }: { products: ProductWithRelations[] }) 
               <span className="text-muted">ລວມ</span>
               <span className="text-2xl font-bold text-navy">{formatKip(subtotal - discountValue)}</span>
             </div>
-            {error && <p className="text-sm text-danger">{error}</p>}
             <button className="btn btn-primary w-full" onClick={checkout} disabled={busy}>
               {busy ? 'ກຳລັງບັນທຶກ...' : 'ຮັບເງິນ ແລະ ບັນທຶກການຂາຍ'}
             </button>
