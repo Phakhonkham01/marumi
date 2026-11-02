@@ -1,5 +1,6 @@
 'use client'
 
+import { refreshCatalog } from '@/app/admin/actions'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { useDialog } from '@/components/dialog'
@@ -33,6 +34,7 @@ export function OrderActions({ orderId, status }: { orderId: number; status: Ord
     const { error } = await createClient().rpc('set_order_status', { p_order_id: orderId, p_status: to })
     setBusy(false)
     if (error) return dialog.alert({ tone: 'error', title: 'ປ່ຽນສະຖານະບໍ່ສຳເລັດ', message: errorMessage(error.message) })
+    await refreshCatalog()
     router.refresh()
     dialog.alert({ tone: 'success', title: 'ອັບເດດອໍເດີແລ້ວ', message: `ສະຖານະ: ${STATUS_LABEL[to]}` })
   }

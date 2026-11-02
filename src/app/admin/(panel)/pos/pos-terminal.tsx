@@ -1,5 +1,6 @@
 'use client'
 
+import { refreshCatalog } from '@/app/admin/actions'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -64,6 +65,7 @@ export function PosTerminal({ products }: { products: ProductWithRelations[] }) 
     setLines([])
     setDiscount('')
     setCustomer('')
+    await refreshCatalog()
     router.refresh()
   }
 

@@ -25,10 +25,13 @@ async function ProductList({ searchParams }: { searchParams: PageProps<'/product
   const deviceId = Number(param(sp.device)) || undefined
   const q = param(sp.q)?.trim() || undefined
 
-  const [categories, models] = await Promise.all([getCategories(), getDeviceModels()])
+  const [categories, models, products] = await Promise.all([
+    getCategories(),
+    getDeviceModels(),
+    listProducts({ categorySlug, deviceModelId: deviceId, q }),
+  ])
   const category = categories.find((c) => c.slug === categorySlug)
   const device = models.find((m) => m.id === deviceId)
-  const products = await listProducts({ categoryId: category?.id, deviceModelId: device?.id, q })
 
   const link = (next: { category?: string | null }) => {
     const params = new URLSearchParams()

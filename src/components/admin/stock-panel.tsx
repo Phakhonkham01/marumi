@@ -1,5 +1,6 @@
 'use client'
 
+import { refreshCatalog } from '@/app/admin/actions'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { useDialog } from '@/components/dialog'
@@ -54,6 +55,7 @@ export function StockPanel({
     if (error) return dialog.alert({ tone: 'error', title: 'ບັນທຶກບໍ່ສຳເລັດ', message: errorMessage(error.message) })
     const variantName = variants.find((v) => v.id === mode.variantId)?.name
     setMode(null)
+    await refreshCatalog()
     router.refresh()
     dialog.alert(
       mode.kind === 'restock'

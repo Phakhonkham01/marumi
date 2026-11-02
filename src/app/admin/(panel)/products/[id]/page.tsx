@@ -4,8 +4,9 @@ import { ProductForm } from '@/components/admin/product-form'
 import { StockPanel } from '@/components/admin/stock-panel'
 import { ArrowLeftIcon } from '@/components/icons'
 import { formatDateTime } from '@/lib/dates'
+import { getCategories, getDeviceModels } from '@/lib/queries'
 import { createClient, getStaffSession } from '@/lib/supabase/server'
-import { PRODUCT_SELECT, type Category, type DeviceModel, type ProductWithRelations } from '@/lib/types'
+import { PRODUCT_SELECT, type ProductWithRelations } from '@/lib/types'
 
 const REASON_LABEL: Record<string, string> = {
   restock: 'ຮັບເຂົ້າ',
@@ -22,24 +23,28 @@ export default async function EditProductPage(props: PageProps<'/admin/products/
   const isOwner = session.role === 'owner'
   const supabase = await createClient()
 
-  const { data } = await supabase.from('products').select(PRODUCT_SELECT).eq('id', Number(id)).maybeSingle()
-  if (!data) notFound()
-  const product = data as unknown as ProductWithRelations
-  const variantIds = product.product_variants.map((v) => v.id)
+  const productId = Number(id)
 
-  const [{ data: categories }, { data: models }, { data: costRows }, { data: movements }] = await Promise.all([
-    supabase.from('categories').select('*').order('sort'),
-    supabase.from('device_models').select('*').order('brand').order('sort'),
+  // One parallel round trip: costs and movements are filtered through their variant's product.
+  const [{ data }, categories, models, { data: costRows }, { data: movements }] = await Promise.all([
+    supabase.from('products').select(PRODUCT_SELECT).eq('id', productId).maybeSingle(),
+    getCategories(),
+    getDeviceModels(),
     isOwner
-      ? supabase.from('variant_costs').select('variant_id, cost_lak').in('variant_id', variantIds)
+      ? supabase
+          .from('variant_costs')
+          .select('variant_id, cost_lak, product_variants!inner(product_id)')
+          .eq('product_variants.product_id', productId)
       : Promise.resolve({ data: [] }),
     supabase
       .from('stock_movements')
-      .select('id, variant_id, delta, reason, note, created_at')
-      .in('variant_id', variantIds)
+      .select('id, variant_id, delta, reason, note, created_at, product_variants!inner(product_id)')
+      .eq('product_variants.product_id', productId)
       .order('created_at', { ascending: false })
       .limit(15),
   ])
+  if (!data) notFound()
+  const product = data as unknown as ProductWithRelations
 
   const costs: Record<number, number> = Object.fromEntries(
     ((costRows as { variant_id: number; cost_lak: number }[]) ?? []).map((c) => [c.variant_id, c.cost_lak]),
@@ -64,8 +69,8 @@ export default async function EditProductPage(props: PageProps<'/admin/products/
       <ProductForm
         key={product.updated_at}
         product={product}
-        categories={(categories as Category[]) ?? []}
-        models={(models as DeviceModel[]) ?? []}
+        categories={categories}
+        models={models}
         costs={costs}
         isOwner={isOwner}
       />

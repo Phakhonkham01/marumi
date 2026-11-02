@@ -1,5 +1,6 @@
 'use client'
 
+import { refreshCatalog } from '@/app/admin/actions'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { useRef, useState } from 'react'
@@ -209,6 +210,7 @@ export function ProductForm({
         if (error) throw error
       }
 
+      await refreshCatalog()
       if (product) {
         router.refresh()
         setRemovedImages([])
@@ -247,6 +249,7 @@ export function ProductForm({
       return
     }
     if (paths.length) await supabase.storage.from(IMAGE_BUCKET).remove(paths)
+    await refreshCatalog()
     router.replace('/admin/products')
     router.refresh()
     dialog.alert({ tone: 'success', title: 'ລຶບສິນຄ້າແລ້ວ', message: `"${product.name}" ຖືກລຶບແລ້ວ` })

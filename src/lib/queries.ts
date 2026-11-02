@@ -1,19 +1,33 @@
 import 'server-only'
-import { createPublicClient } from './supabase/server'
+import { cacheLife, cacheTag } from 'next/cache'
+import { CATALOG_TAG } from './catalog'
+import { createCatalogClient } from './supabase/server'
 import { PRODUCT_SELECT, type Category, type DeviceModel, type ProductWithRelations } from './types'
 
+// Storefront reads are cached on the server so customers never wait on Supabase.
+// Admin changes call refreshCatalog() to expire them immediately; the timed
+// revalidate is a safety net for changes made outside the admin (e.g. SQL editor).
+function catalogCache() {
+  cacheTag(CATALOG_TAG)
+  cacheLife({ stale: 30, revalidate: 60, expire: 3600 })
+}
+
 export async function getCategories(): Promise<Category[]> {
-  const { data } = await (await createPublicClient()).from('categories').select('*').order('sort')
+  'use cache'
+  catalogCache()
+  const { data } = await createCatalogClient().from('categories').select('*').order('sort')
   return data ?? []
 }
 
 export async function getDeviceModels(): Promise<DeviceModel[]> {
-  const { data } = await (await createPublicClient()).from('device_models').select('*').order('brand').order('sort')
+  'use cache'
+  catalogCache()
+  const { data } = await createCatalogClient().from('device_models').select('*').order('brand').order('sort')
   return data ?? []
 }
 
 type ListOptions = {
-  categoryId?: number
+  categorySlug?: string
   deviceModelId?: number
   q?: string
   featured?: boolean
@@ -21,13 +35,16 @@ type ListOptions = {
 }
 
 export async function listProducts(opts: ListOptions = {}): Promise<ProductWithRelations[]> {
+  'use cache'
+  catalogCache()
   // With a device filter, embed only that model's variants so cards show its price and stock.
-  const select = opts.deviceModelId
+  let select = opts.deviceModelId
     ? PRODUCT_SELECT.replace('product_variants(', 'product_variants!inner(')
     : PRODUCT_SELECT
-  let query = (await createPublicClient()).from('products').select(select).eq('is_active', true)
+  if (opts.categorySlug) select += ', categories!inner(slug)'
+  let query = createCatalogClient().from('products').select(select).eq('is_active', true)
 
-  if (opts.categoryId) query = query.eq('category_id', opts.categoryId)
+  if (opts.categorySlug) query = query.eq('categories.slug', opts.categorySlug)
   if (opts.deviceModelId) query = query.eq('product_variants.device_model_id', opts.deviceModelId)
   if (opts.featured) query = query.eq('is_featured', true)
   if (opts.q) {
@@ -40,7 +57,9 @@ export async function listProducts(opts: ListOptions = {}): Promise<ProductWithR
 }
 
 export async function getProduct(slug: string): Promise<ProductWithRelations | null> {
-  const { data } = await (await createPublicClient())
+  'use cache'
+  catalogCache()
+  const { data } = await createCatalogClient()
     .from('products')
     .select(PRODUCT_SELECT)
     .eq('slug', slug)

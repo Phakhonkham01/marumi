@@ -1,5 +1,6 @@
 'use client'
 
+import { refreshCatalog } from '@/app/admin/actions'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { useDialog } from '@/components/dialog'
@@ -20,6 +21,7 @@ function useMutation() {
       dialog.alert({ tone: 'error', title: 'ບັນທຶກບໍ່ສຳເລັດ', message: errorMessage(error.message) })
       return false
     }
+    await refreshCatalog()
     router.refresh()
     dialog.alert({ tone: 'success', title: success })
     return true

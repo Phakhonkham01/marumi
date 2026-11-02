@@ -31,6 +31,11 @@ export async function createClient() {
 /** Cookie-free client for the public storefront (always reads as a customer). */
 export async function createPublicClient() {
   await connection()
+  return createCatalogClient()
+}
+
+/** Anonymous client for use inside `'use cache'` scopes, where request APIs are off-limits. */
+export function createCatalogClient() {
   return createAnonClient(SUPABASE_URL, SUPABASE_KEY, {
     auth: { persistSession: false, autoRefreshToken: false },
   })
