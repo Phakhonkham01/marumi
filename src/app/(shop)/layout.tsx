@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { ChatIcon, PhoneIcon } from '@/components/icons'
 import { CartProvider } from '@/components/shop/cart'
 import { ShopHeader } from '@/components/shop/header'
@@ -30,9 +31,9 @@ export default function ShopLayout({ children }: LayoutProps<'/'>) {
           <div className="text-sm text-muted sm:text-right">
             <p>ຮັບທີ່ຮ້ານ ຫຼື ສົ່ງທົ່ວປະເທດ</p>
             <p>© {SHOP.name}</p>
-            <a href="/admin/login" className="mt-2 inline-block underline">
+            <Link href="/admin/login" className="mt-2 inline-block underline">
               ເຂົ້າລະບົບຫຼັງບ້ານ
-            </a>
+            </Link>
           </div>
         </div>
       </footer>

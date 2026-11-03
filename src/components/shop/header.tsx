@@ -1,7 +1,7 @@
 'use client'
 
 import Image from 'next/image'
-import Link from 'next/link'
+import Link, { useLinkStatus } from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { BagIcon, SearchIcon, UserIcon } from '@/components/icons'
@@ -52,14 +52,14 @@ export function ShopHeader() {
           ສິນຄ້າທັງໝົດ
         </Link>
 
+        {/* Straight to the static login page (prefetched, so it opens instantly);
+            the proxy forwards signed-in staff on to /admin. */}
         <Link
-          href="/admin"
-          prefetch={false}
-          className="flex h-11 shrink-0 items-center gap-1.5 rounded-full border-[1.5px] border-line bg-white px-3 font-semibold text-navy hover:border-sky"
+          href="/admin/login"
+          className="flex h-11 min-w-11 shrink-0 items-center justify-center gap-1.5 rounded-full border-[1.5px] border-line bg-white px-3 font-semibold text-navy hover:border-sky"
           aria-label="ເຂົ້າລະບົບ"
         >
-          <UserIcon size={20} />
-          <span className="hidden text-sm sm:inline">ເຂົ້າລະບົບ</span>
+          <LoginLabel />
         </Link>
 
         <Link
@@ -76,5 +76,19 @@ export function ShopHeader() {
         </Link>
       </div>
     </header>
+  )
+}
+
+function LoginLabel() {
+  const { pending } = useLinkStatus()
+  return (
+    <>
+      {pending ? (
+        <span className="h-5 w-5 animate-spin rounded-full border-2 border-sky border-t-navy" aria-hidden />
+      ) : (
+        <UserIcon size={20} />
+      )}
+      <span className="hidden text-sm sm:inline">{pending ? 'ກຳລັງເປີດ...' : 'ເຂົ້າລະບົບ'}</span>
+    </>
   )
 }
