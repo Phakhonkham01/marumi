@@ -90,6 +90,14 @@ const ERROR_LABEL: Record<string, string> = {
   forbidden: 'ບໍ່ມີສິດ',
   forbidden_cost: 'ສະເພາະເຈົ້າຂອງຮ້ານທີ່ໃສ່ຕົ້ນທຶນໄດ້',
   stock_must_use_rpc: 'ໃຫ້ປ່ຽນສະຕັອກຜ່ານປຸ່ມ ຮັບເຂົ້າ/ປັບສະຕັອກ',
+  invalid_price: 'ລາຄາຕ້ອງເປັນຕົວເລກບໍ່ຕິດລົບ',
+  invalid_compare_price: 'ລາຄາກ່ອນຫຼຸດບໍ່ຖືກຕ້ອງ',
+  invalid_stock: 'ສະຕັອກຕ້ອງເປັນຈຳນວນເຕັມບໍ່ຕິດລົບ',
+  invalid_cost: 'ຕົ້ນທຶນຕ້ອງເປັນຈຳນວນເຕັມບໍ່ຕິດລົບ',
+  invalid_variants: 'ຕ້ອງມີຕົວເລືອກຢ່າງໜ້ອຍ 1 ລາຍການ',
+  invalid_variant_name: 'ຊື່ຕົວເລືອກບໍ່ຖືກຕ້ອງ',
+  product_not_found: 'ບໍ່ພົບສິນຄ້າ',
+  variant_not_found: 'ບໍ່ພົບຕົວເລືອກສິນຄ້າ',
 }
 
 /** Turns a Postgres exception raised by our RPCs into a Lao message. */

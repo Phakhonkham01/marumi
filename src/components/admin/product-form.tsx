@@ -3,11 +3,11 @@
 import { refreshCatalog } from '@/app/admin/actions'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useDialog } from '@/components/dialog'
 import { PlusIcon, TrashIcon, UploadIcon } from '@/components/icons'
 import { compressImage, extensionFor } from '@/lib/image'
-import { errorMessage, formatKip, imageUrl, slugify } from '@/lib/format'
+import { errorMessage, formatKip, imageUrl } from '@/lib/format'
 import { createClient } from '@/lib/supabase/client'
 import { IMAGE_BUCKET } from '@/lib/supabase/env'
 import type { Category, DeviceModel, ProductWithRelations, Spec } from '@/lib/types'
@@ -26,7 +26,17 @@ type VariantRow = {
 type ImageRow = { key: string; id?: number; path?: string; file?: File; preview: string }
 
 const newKey = () => Math.random().toString(36).slice(2)
-const toInt = (s: string) => (s.trim() === '' ? null : Math.max(0, Math.round(Number(s.replace(/[,\s]/g, '')))))
+const MAX_IMAGES = 10
+const MAX_IMAGE_BYTES = 10 * 1024 * 1024
+const MAX_INT = 2_147_483_647
+const digitsOnly = (value: string) => value.replace(/\D/g, '')
+const toInt = (s: string) => {
+  const raw = s.trim().replace(/[,\s]/g, '')
+  if (!raw) return null
+  if (!/^\d+$/.test(raw)) return null
+  const value = Number(raw)
+  return Number.isSafeInteger(value) && value <= MAX_INT ? value : null
+}
 
 export function ProductForm({
   product,
@@ -60,6 +70,7 @@ export function ProductForm({
       .map((img) => ({ key: String(img.id), id: img.id, path: img.path, preview: imageUrl(img.path) })),
   )
   const [removedImages, setRemovedImages] = useState<ImageRow[]>([])
+  const imagesRef = useRef<ImageRow[]>([])
   const [variants, setVariants] = useState<VariantRow[]>(() => {
     const rows = [...(product?.product_variants ?? [])]
       .sort((a, b) => a.sort - b.sort || a.id - b.id)
@@ -75,6 +86,13 @@ export function ProductForm({
       }))
     return rows.length ? rows : [blankVariant('ມາດຕະຖານ')]
   })
+
+  imagesRef.current = images
+  useEffect(() => {
+    return () => {
+      for (const image of imagesRef.current) if (image.file) URL.revokeObjectURL(image.preview)
+    }
+  }, [])
 
   function blankVariant(variantName = '', deviceModelId: number | null = null): VariantRow {
     return {
@@ -105,11 +123,19 @@ export function ProductForm({
 
   function onPickFiles(files: FileList | null) {
     if (!files) return
-    const rows = Array.from(files).map((file) => ({ key: newKey(), file, preview: URL.createObjectURL(file) }))
+    const remaining = MAX_IMAGES - images.length
+    const selected = Array.from(files)
+    if (remaining <= 0) return missing(`ເພີ່ມຮູບໄດ້ສູງສຸດ ${MAX_IMAGES} ຮູບ`)
+    const accepted = selected.filter((file) => file.type.startsWith('image/') && file.size <= MAX_IMAGE_BYTES).slice(0, remaining)
+    if (accepted.length !== selected.length) {
+      missing(`ຮູບຕ້ອງເປັນຮູບພາບ ແລະ ຂະໜາດບໍ່ເກີນ 10 MB (ສູງສຸດ ${MAX_IMAGES} ຮູບ)`)
+    }
+    const rows = accepted.map((file) => ({ key: newKey(), file, preview: URL.createObjectURL(file) }))
     setImages((prev) => [...prev, ...rows])
   }
 
   function removeImage(row: ImageRow) {
+    if (row.file) URL.revokeObjectURL(row.preview)
     setImages((prev) => prev.filter((r) => r.key !== row.key))
     if (row.id) setRemovedImages((prev) => [...prev, row])
   }
@@ -129,74 +155,72 @@ export function ProductForm({
   async function onSave() {
     const basePrice = toInt(price)
     if (!name.trim()) return missing('ກະລຸນາໃສ່ຊື່ສິນຄ້າ')
-    if (basePrice == null) return missing('ກະລຸນາໃສ່ລາຄາ')
+    if (basePrice == null) return missing('ລາຄາຂາຍຕ້ອງເປັນຈຳນວນເຕັມ 0–2,147,483,647 ກີບ')
     if (variants.length === 0) return missing('ຕ້ອງມີຢ່າງໜ້ອຍ 1 ຕົວເລືອກ')
     if (variants.some((v) => !v.name.trim())) return missing('ກະລຸນາໃສ່ຊື່ຕົວເລືອກໃຫ້ຄົບ')
+    const comparePrice = toInt(compareAt)
+    if (compareAt.trim() && comparePrice == null) return missing('ລາຄາກ່ອນຫຼຸດຕ້ອງເປັນຈຳນວນເຕັມ 0–2,147,483,647 ກີບ')
+    if (comparePrice != null && comparePrice <= basePrice) return missing('ລາຄາກ່ອນຫຼຸດຕ້ອງສູງກວ່າລາຄາຂາຍ')
+    const names = new Set<string>()
+    const modelIds = new Set<number>()
+    for (const variant of variants) {
+      const key = variant.name.trim().toLocaleLowerCase()
+      if (names.has(key)) return missing('ຊື່ຕົວເລືອກຫ້າມຊ້ຳກັນ')
+      names.add(key)
+      if (variant.device_model_id != null) {
+        if (modelIds.has(variant.device_model_id)) return missing('ຫ້າມເລືອກລຸ້ນໂທລະສັບຊ້ຳກັນ')
+        modelIds.add(variant.device_model_id)
+      }
+      if (variant.price.trim() && toInt(variant.price) == null) return missing('ລາຄາຕົວເລືອກຕ້ອງເປັນຈຳນວນເຕັມ 0–2,147,483,647 ກີບ')
+      if (!variant.id && toInt(variant.initialStock) == null) return missing('ສະຕັອກເລີ່ມຕົ້ນຕ້ອງເປັນຈຳນວນເຕັມ 0–2,147,483,647')
+      if (isOwner && variant.cost.trim() && toInt(variant.cost) == null) return missing('ຕົ້ນທຶນຕ້ອງເປັນຈຳນວນເຕັມ 0–2,147,483,647 ກີບ')
+    }
 
     setSaving(true)
     const supabase = createClient()
+    const uploadedPaths: string[] = []
+    let savedProductId = product?.id
     try {
       const payload = {
         name: name.trim(),
         category_id: categoryId === '' ? null : categoryId,
         price_lak: basePrice,
-        compare_at_lak: toInt(compareAt),
+        compare_at_lak: comparePrice,
         description: description.trim(),
         specs: specs.filter((s) => s.k.trim() && s.v.trim()),
         is_active: isActive,
         is_featured: isFeatured,
       }
 
-      let productId = product?.id
-      if (productId) {
-        const { error } = await supabase.from('products').update(payload).eq('id', productId)
-        if (error) throw error
-      } else {
-        const slug = `${slugify(payload.name)}-${newKey().slice(0, 4)}`
-        const { data, error } = await supabase.from('products').insert({ ...payload, slug }).select('id').single()
-        if (error) throw error
-        productId = data.id as number
-      }
-
-      // Variants: update existing (never stock), insert new with their opening stock.
-      const costRows: { variant_id: number; cost_lak: number }[] = []
-      for (const [sort, v] of variants.entries()) {
-        const fields = {
+      const { data: returnedProductId, error: saveError } = await supabase.rpc('save_product', {
+        p_product: { ...payload, id: product?.id ?? '' },
+        p_variants: variants.map((v, sort) => ({
+          id: v.id ?? '',
           name: v.name.trim(),
-          device_model_id: v.device_model_id,
-          price_lak: toInt(v.price),
+          device_model_id: v.device_model_id ?? '',
+          price_lak: toInt(v.price) ?? '',
+          initial_stock: toInt(v.initialStock) ?? 0,
+          cost_lak: isOwner ? toInt(v.cost) ?? '' : '',
           sort,
           is_active: v.is_active,
-        }
-        let variantId = v.id
-        if (variantId) {
-          const { error } = await supabase.from('product_variants').update(fields).eq('id', variantId)
-          if (error) throw error
-        } else {
-          const { data, error } = await supabase
-            .from('product_variants')
-            .insert({ ...fields, product_id: productId, stock: toInt(v.initialStock) ?? 0 })
-            .select('id')
-            .single()
-          if (error) throw error
-          variantId = data.id as number
-        }
-        const cost = toInt(v.cost)
-        if (isOwner && cost != null && cost !== costs[variantId]) costRows.push({ variant_id: variantId, cost_lak: cost })
-      }
-      if (costRows.length) {
-        const { error } = await supabase.from('variant_costs').upsert(costRows)
-        if (error) throw error
-      }
+        })),
+      })
+      if (saveError) throw saveError
+      const productId = Number(returnedProductId)
+      if (!Number.isSafeInteger(productId)) throw new Error('product_not_found')
+      savedProductId = productId
 
       // Images: drop removed, upload new, then persist order.
       if (removedImages.length) {
-        await supabase.from('product_images').delete().in('id', removedImages.map((r) => r.id!))
-        await supabase.storage.from(IMAGE_BUCKET).remove(removedImages.map((r) => r.path!))
+        const { error } = await supabase.from('product_images').delete().in('id', removedImages.map((r) => r.id!))
+        if (error) throw error
+        const { error: storageError } = await supabase.storage.from(IMAGE_BUCKET).remove(removedImages.map((r) => r.path!))
+        if (storageError) throw storageError
       }
       for (const [sort, img] of images.entries()) {
         if (img.id) {
-          await supabase.from('product_images').update({ sort }).eq('id', img.id)
+          const { error } = await supabase.from('product_images').update({ sort }).eq('id', img.id)
+          if (error) throw error
           continue
         }
         const blob = await compressImage(img.file!)
@@ -206,6 +230,7 @@ export function ProductForm({
           cacheControl: '31536000',
         })
         if (upload.error) throw upload.error
+        uploadedPaths.push(path)
         const { error } = await supabase.from('product_images').insert({ product_id: productId, path, sort })
         if (error) throw error
       }
@@ -217,14 +242,18 @@ export function ProductForm({
         setSaving(false)
         dialog.alert({ tone: 'success', title: 'ບັນທຶກສຳເລັດ', message: `ອັບເດດ "${payload.name}" ແລ້ວ` })
       } else {
-        router.replace(`/admin/products/${productId}`)
-        dialog.alert({
+        await dialog.alert({
           tone: 'success',
           title: 'ເພີ່ມສິນຄ້າສຳເລັດ',
-          message: `"${payload.name}" ຖືກເພີ່ມແລ້ວ ສາມາດປັບສະຕັອກ ແລະ ຮູບຕໍ່ໄດ້ໃນໜ້ານີ້`,
+          message: `"${payload.name}" ຖືກເພີ່ມແລ້ວ ມີ ${variants.length} ຕົວເລືອກ ແລະ ${images.length} ຮູບ. ໜ້າຕໍ່ໄປໃຫ້ປັບສະຕັອກ ຫຼື ແກ້ໄຂລາຍລະອຽດໄດ້`,
         })
+        router.replace('/admin/products')
       }
     } catch (e) {
+      if (uploadedPaths.length) {
+        if (savedProductId) await supabase.from('product_images').delete().eq('product_id', savedProductId).in('path', uploadedPaths)
+        await supabase.storage.from(IMAGE_BUCKET).remove(uploadedPaths)
+      }
       setSaving(false)
       dialog.alert({ tone: 'error', title: 'ບັນທຶກບໍ່ສຳເລັດ', message: errorMessage((e as Error).message) })
     }
@@ -248,7 +277,16 @@ export function ProductForm({
       dialog.alert({ tone: 'error', title: 'ລຶບບໍ່ສຳເລັດ', message: errorMessage(error.message) })
       return
     }
-    if (paths.length) await supabase.storage.from(IMAGE_BUCKET).remove(paths)
+    if (paths.length) {
+      const { error: storageError } = await supabase.storage.from(IMAGE_BUCKET).remove(paths)
+      if (storageError) {
+        dialog.alert({
+          tone: 'warning',
+          title: 'ລຶບສິນຄ້າແລ້ວ ແຕ່ລຶບຮູບບາງສ່ວນບໍ່ສຳເລັດ',
+          message: errorMessage(storageError.message),
+        })
+      }
+    }
     await refreshCatalog()
     router.replace('/admin/products')
     router.refresh()
@@ -260,7 +298,8 @@ export function ProductForm({
       <section className="card space-y-4 p-4">
         <div>
           <label className="label" htmlFor="name">ຊື່ສິນຄ້າ</label>
-          <input id="name" className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder="ເຊັ່ນ Eloop E29 30000mAh" />
+          <input id="name" className="input" value={name} maxLength={200} onChange={(e) => setName(e.target.value)} placeholder="ເຊັ່ນ Eloop E29 30000mAh" />
+          <p className="mt-1 text-xs text-muted">ຂໍ້ຄວາມບໍ່ເກີນ 200 ຕົວອັກສອນ</p>
         </div>
         <div className="grid gap-4 sm:grid-cols-3">
           <div>
@@ -281,11 +320,12 @@ export function ProductForm({
           </div>
           <div>
             <label className="label" htmlFor="price">ລາຄາຂາຍ (ກີບ)</label>
-            <input id="price" className="input" inputMode="numeric" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="385000" />
+            <input id="price" className="input" type="text" inputMode="numeric" pattern="[0-9]*" maxLength={10} value={price} onChange={(e) => setPrice(digitsOnly(e.target.value))} placeholder="385000" />
+            <p className="mt-1 text-xs text-muted">ໃສ່ຕົວເລກເຕັມເທົ່ານັ້ນ, ບໍ່ຕ້ອງໃສ່ຈຸດ ຫຼື ຕົວອັກສອນ</p>
           </div>
           <div>
             <label className="label" htmlFor="compare">ລາຄາກ່ອນຫຼຸດ (ຖ້າມີ)</label>
-            <input id="compare" className="input" inputMode="numeric" value={compareAt} onChange={(e) => setCompareAt(e.target.value)} />
+            <input id="compare" className="input" type="text" inputMode="numeric" pattern="[0-9]*" maxLength={10} value={compareAt} onChange={(e) => setCompareAt(digitsOnly(e.target.value))} placeholder="ຕົວເລກເຕັມ (ກີບ)" />
           </div>
         </div>
         <div className="flex flex-wrap gap-4 text-sm font-semibold">
@@ -370,9 +410,12 @@ export function ProductForm({
                 </select>
                 <input
                   className="input"
+                  type="text"
                   inputMode="numeric"
+                  pattern="[0-9]*"
+                  maxLength={10}
                   value={v.price}
-                  onChange={(e) => updateVariant(v.key, { price: e.target.value })}
+                  onChange={(e) => updateVariant(v.key, { price: digitsOnly(e.target.value) })}
                   placeholder="ລາຄາຕ່າງ"
                   aria-label="ລາຄາສະເພາະຕົວເລືອກ"
                 />
@@ -385,9 +428,12 @@ export function ProductForm({
                     ສະຕັອກເລີ່ມຕົ້ນ
                     <input
                       className="input w-20! py-1!"
+                      type="text"
                       inputMode="numeric"
+                      pattern="[0-9]*"
+                      maxLength={10}
                       value={v.initialStock}
-                      onChange={(e) => updateVariant(v.key, { initialStock: e.target.value })}
+                      onChange={(e) => updateVariant(v.key, { initialStock: digitsOnly(e.target.value) })}
                     />
                   </label>
                 )}
@@ -396,9 +442,12 @@ export function ProductForm({
                     ຕົ້ນທຶນ
                     <input
                       className="input w-28! py-1!"
+                      type="text"
                       inputMode="numeric"
+                      pattern="[0-9]*"
+                      maxLength={10}
                       value={v.cost}
-                      onChange={(e) => updateVariant(v.key, { cost: e.target.value })}
+                      onChange={(e) => updateVariant(v.key, { cost: digitsOnly(e.target.value) })}
                       placeholder="ກີບ"
                     />
                   </label>
@@ -423,7 +472,7 @@ export function ProductForm({
           ))}
         </div>
         <p className="text-xs text-muted">
-          ລາຄາຕ່າງ: ປ່ອຍວ່າງ = ໃຊ້ລາຄາຫຼັກ {price && toInt(price) != null ? `(${formatKip(toInt(price)!)})` : ''}
+          ລາຄາຕ່າງ: ປ່ອຍວ່າງ = ໃຊ້ລາຄາຫຼັກ {price && toInt(price) != null ? `(${formatKip(toInt(price)!)})` : ''}. ລາຄາ, ສະຕັອກ ແລະ ຕົ້ນທຶນຮັບສະເພາະຕົວເລກເຕັມ.
         </p>
       </section>
 
@@ -439,12 +488,14 @@ export function ProductForm({
             <input
               className="input"
               value={s.k}
+              aria-label={`ຊື່ສະເປັກ ${i + 1}`}
               placeholder="ເຊັ່ນ ຄວາມຈຸ"
               onChange={(e) => setSpecs((rows) => rows.map((r, j) => (j === i ? { ...r, k: e.target.value } : r)))}
             />
             <input
               className="input"
               value={s.v}
+              aria-label={`ຄ່າສະເປັກ ${i + 1}`}
               placeholder="ເຊັ່ນ 10000 mAh"
               onChange={(e) => setSpecs((rows) => rows.map((r, j) => (j === i ? { ...r, v: e.target.value } : r)))}
             />
@@ -455,7 +506,7 @@ export function ProductForm({
         ))}
         <div>
           <label className="label" htmlFor="description">ລາຍລະອຽດ</label>
-          <textarea id="description" className="input" rows={4} value={description} onChange={(e) => setDescription(e.target.value)} />
+          <textarea id="description" className="input" rows={4} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="ຂໍ້ຄວາມອະທິບາຍສິນຄ້າ" />
         </div>
       </section>
 

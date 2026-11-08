@@ -49,6 +49,19 @@ export function PosTerminal({ products }: { products: ProductWithRelations[] }) 
   const updateLine = (id: number, patch: Partial<Line>) =>
     setLines((prev) => prev.map((l) => (l.variant.id === id ? { ...l, ...patch } : l)))
 
+  async function clearBill() {
+    const confirmed = await dialog.confirm({
+      title: 'ລ້າງສິນຄ້າໃນບິນ?',
+      message: `ຈະລຶບສິນຄ້າ ${lines.length} ລາຍການອອກຈາກບິນ ແຕ່ຍັງບໍ່ຫັກສະຕັອກ`,
+      okLabel: 'ລຶບທັງໝົດ',
+      danger: true,
+    })
+    if (!confirmed) return
+    setLines([])
+    setDiscount('')
+    setCustomer('')
+  }
+
   async function checkout() {
     setBusy(true)
     const total = subtotal - discountValue
@@ -95,7 +108,14 @@ export function PosTerminal({ products }: { products: ProductWithRelations[] }) 
       </section>
 
       <section className="card h-fit space-y-3 p-4 lg:sticky lg:top-8">
-        <h2 className="font-bold text-navy">ບິນ</h2>
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="font-bold text-navy">ບິນ</h2>
+          {lines.length > 0 && (
+            <button type="button" className="btn btn-ghost gap-1 px-2 py-1 text-sm text-danger" onClick={clearBill}>
+              <TrashIcon size={16} /> ລ້າງບິນ
+            </button>
+          )}
+        </div>
         {done && (
           <p className="rounded-xl bg-success/10 px-3 py-2 text-sm text-success">
             ✓ ບັນທຶກແລ້ວ{' '}
