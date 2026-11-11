@@ -64,6 +64,15 @@ export default async function EditProductPage(props: PageProps<'/admin/products/
         </Link>
       </div>
 
+      <p className="flex flex-wrap gap-x-5 gap-y-1 text-sm text-muted">
+        <span>
+          ເພີ່ມເມື່ອ: <span className="font-semibold text-ink">{formatDateTime(product.created_at)}</span>
+        </span>
+        <span>
+          ແກ້ໄຂລ່າສຸດ: <span className="font-semibold text-ink">{formatDateTime(product.updated_at)}</span>
+        </span>
+      </p>
+
       <StockPanel variants={variants} costs={costs} isOwner={isOwner} />
 
       <ProductForm

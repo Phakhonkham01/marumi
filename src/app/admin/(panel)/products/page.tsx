@@ -1,6 +1,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { BoxIcon, EditIcon, PlusIcon } from '@/components/icons'
+import { formatDateTime } from '@/lib/dates'
 import { formatKip, imageUrl, minPrice, sortedImages } from '@/lib/format'
 import { getCategories } from '@/lib/queries'
 import { createClient, getStaffSession } from '@/lib/supabase/server'
@@ -65,6 +66,8 @@ export default async function AdminProductsPage(props: PageProps<'/admin/product
               {isOwner && <th className="text-right!">ກຳໄລ</th>}
               <th className="text-right!">ສະຕັອກ</th>
               <th>ສະຖານະ</th>
+              <th>ເພີ່ມເມື່ອ</th>
+              <th>ແກ້ໄຂລ່າສຸດ</th>
               <th className="text-center!">ຈັດການ</th>
             </tr>
           </thead>
@@ -103,6 +106,8 @@ export default async function AdminProductsPage(props: PageProps<'/admin/product
                     )}
                     {p.is_featured && <span className="ml-1 rounded bg-butter px-2 py-0.5 text-xs font-semibold text-navy">ແນະນຳ</span>}
                   </td>
+                  <td className="whitespace-nowrap text-muted">{formatDateTime(p.created_at)}</td>
+                  <td className="whitespace-nowrap text-muted">{formatDateTime(p.updated_at)}</td>
                   <td className="text-center">
                     <Link
                       href={`/admin/products/${p.id}`}
@@ -116,7 +121,7 @@ export default async function AdminProductsPage(props: PageProps<'/admin/product
             })}
             {products.length === 0 && (
               <tr>
-                <td colSpan={isOwner ? 10 : 8} className="py-10 text-center text-muted">
+                <td colSpan={isOwner ? 12 : 10} className="py-10 text-center text-muted">
                   ບໍ່ມີສິນຄ້າ
                 </td>
               </tr>
