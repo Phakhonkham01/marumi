@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "sweetalert2/dist/sweetalert2.min.css" layer(base);
 
 /* Palette taken from the Marumi logo: navy outline, dusty blue ring,
    cream background, butter-yellow mascot, blush cheeks. */
@@ -17,10 +18,10 @@
   --color-success: #2f8f6b;
   --color-danger: #c8524a;
 
-  --font-sans: var(--font-lao), var(--font-latin), system-ui, sans-serif;
-  --font-display: var(--font-latin), var(--font-lao), system-ui, sans-serif;
+  --font-sans: var(--font-looped), system-ui, sans-serif;
+  --font-display: var(--font-looped), system-ui, sans-serif;
 
-  --radius-card: 1.25rem;
+  --radius-card: 0.9rem;
 }
 
 body {
@@ -38,8 +39,23 @@ body {
 @layer components {
 .card {
   background: white;
-  border: 1.5px solid var(--color-line);
-  border-radius: var(--radius-card);
+  border: 1px solid var(--color-line);
+  border-radius: 0.6rem;
+  box-shadow: 0 1px 3px rgb(29 43 72 / 0.08);
+}
+
+/* Standalone page heading styled like a panel header. */
+.page-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 0.6rem;
+  border-bottom: 3px solid var(--color-butter);
+  background: var(--color-navy);
+  color: white;
+  padding: 0.7rem 1rem;
+  font-size: 1.1rem;
+  font-weight: 700;
 }
 
 .btn {
@@ -86,6 +102,13 @@ body {
   background: white;
   color: var(--color-danger);
   border: 1.5px solid #efc9c5;
+}
+.btn-solid-danger {
+  background: var(--color-danger);
+  color: white;
+}
+.btn-solid-danger:hover {
+  opacity: 0.9;
 }
 .btn-sm {
   padding: 0.35rem 0.85rem;
@@ -135,5 +158,162 @@ body {
 }
 .no-scrollbar {
   scrollbar-width: none;
+}
+
+/* ---- SaArdPOS-style building blocks ---- */
+
+/* Panel: card with a navy header bar holding title, search and actions. */
+.panel {
+  background: white;
+  border-radius: var(--radius-card);
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgb(29 43 72 / 0.08);
+}
+.panel-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  background: var(--color-navy);
+  color: white;
+  padding: 0.75rem 1rem;
+  border-bottom: 3px solid var(--color-butter);
+}
+.panel-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin-right: auto;
+}
+.panel-search {
+  display: flex;
+  overflow: hidden;
+  border-radius: 999px;
+  background: white;
+}
+.panel-search input {
+  min-width: 0;
+  flex: 1;
+  padding: 0.5rem 0.9rem;
+  color: var(--color-ink);
+  outline: none;
+}
+.panel-search button {
+  background: var(--color-butter);
+  color: var(--color-navy);
+  font-weight: 700;
+  padding: 0 1.1rem;
+}
+.panel-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border-radius: 999px;
+  background: white;
+  color: var(--color-navy);
+  font-weight: 600;
+  padding: 0.45rem 1rem;
+  white-space: nowrap;
+}
+.panel-btn:hover {
+  background: var(--color-butter);
+}
+.panel-head select {
+  border-radius: 0.6rem;
+  background: white;
+  color: var(--color-navy);
+  font-weight: 600;
+  padding: 0.45rem 0.75rem;
+}
+
+/* Data table: navy header, zebra rows. */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+.data-table th {
+  background: var(--color-navy-soft);
+  color: white;
+  font-weight: 600;
+  text-align: left;
+  padding: 0.7rem 0.75rem;
+  white-space: nowrap;
+  border-right: 1px solid rgb(255 255 255 / 0.15);
+}
+.data-table td {
+  padding: 0.6rem 0.75rem;
+  border-bottom: 1px solid var(--color-line);
+  border-right: 1px solid var(--color-line);
+  vertical-align: middle;
+}
+.data-table tbody tr:nth-child(even) td {
+  background: #f6f9fd;
+}
+.data-table tbody tr:hover td {
+  background: var(--color-mist);
+}
+.data-table .num {
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* Product tile: category tag, square image, navy footer with name, price, stock. */
+.pcard {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 0.6rem;
+  background: white;
+  box-shadow: 0 2px 6px rgb(29 43 72 / 0.12);
+  text-align: left;
+  transition: transform 0.12s, box-shadow 0.12s;
+}
+.pcard:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 14px rgb(29 43 72 / 0.18);
+}
+.pcard-tag {
+  position: absolute;
+  left: 0.6rem;
+  top: 0.6rem;
+  z-index: 1;
+  border-radius: 0.3rem;
+  background: var(--color-blush);
+  color: white;
+  padding: 0.1rem 0.5rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+.pcard-foot {
+  background: var(--color-navy);
+  color: white;
+  padding: 0.6rem 0.75rem;
+}
+.pcard-foot hr {
+  margin: 0.45rem 0;
+  border: 0;
+  border-top: 1.5px dashed rgb(255 255 255 / 0.45);
+}
+
+/* Summary box under the POS cart. */
+.summary-box {
+  border: 2px dashed var(--color-navy);
+  background: var(--color-mist);
+  border-radius: 0.4rem;
+  padding: 0.9rem 1rem;
+}
+
+/* SweetAlert2 in the brand font and colors. */
+.swal-marumi {
+  font-family: var(--font-looped), system-ui, sans-serif;
+  border-radius: var(--radius-card);
+  color: var(--color-ink);
+}
+.swal-marumi .swal2-title {
+  color: var(--color-navy);
+  font-size: 1.3rem;
 }
 }

@@ -41,7 +41,7 @@ export default async function OrderPage(props: PageProps<'/admin/orders/[id]'>) 
         <ArrowLeftIcon size={16} /> ອໍເດີ
       </Link>
       <div className="flex flex-wrap items-center gap-3">
-        <h1 className="font-display text-2xl font-bold text-navy">{o.code}</h1>
+        <h1 className="page-bar">{o.code}</h1>
         <span className={`rounded-full px-3 py-1 text-sm font-semibold ${STATUS_STYLE[o.status]}`}>{STATUS_LABEL[o.status]}</span>
       </div>
 

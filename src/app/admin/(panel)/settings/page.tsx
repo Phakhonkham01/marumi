@@ -15,7 +15,7 @@ export default async function SettingsPage() {
 
   return (
     <div className="space-y-5">
-      <h1 className="text-2xl font-bold text-navy">ຕັ້ງຄ່າ</h1>
+      <h1 className="page-bar">ຕັ້ງຄ່າ</h1>
       <CategoryEditor categories={(categories as Category[]) ?? []} />
       <DeviceModelEditor models={(models as DeviceModel[]) ?? []} />
 

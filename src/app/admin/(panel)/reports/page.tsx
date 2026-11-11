@@ -48,7 +48,7 @@ export default async function ReportsPage(props: PageProps<'/admin/reports'>) {
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-2xl font-bold text-navy">ລາຍງານ</h1>
+        <h1 className="page-bar flex-1">ລາຍງານ</h1>
         <div className="flex gap-2">
           {RANGES.map((r) => (
             <a key={r.days} href={`/admin/reports?days=${r.days}`} className="chip" data-active={r.days === days}>
@@ -75,7 +75,7 @@ export default async function ReportsPage(props: PageProps<'/admin/reports'>) {
           {from} → {to} · ນັບອໍເດີທີ່ຢືນຢັນ ຫຼື ສຳເລັດແລ້ວ
         </p>
         {rows.length ? (
-          <table className="w-full text-sm">
+          <table className="data-table">
             <thead>
               <tr className="text-left text-xs text-muted">
                 <th className="py-1 font-normal">ວັນທີ</th>
@@ -109,7 +109,7 @@ export default async function ReportsPage(props: PageProps<'/admin/reports'>) {
       <section className="card p-4">
         <h2 className="mb-3 font-bold text-navy">ສິນຄ້າຂາຍດີ</h2>
         {(top as TopRow[] | null)?.length ? (
-          <table className="w-full text-sm">
+          <table className="data-table">
             <thead>
               <tr className="text-left text-xs text-muted">
                 <th className="py-1 font-normal">ສິນຄ້າ</th>

@@ -50,7 +50,7 @@ async function ProductList({ searchParams }: { searchParams: PageProps<'/product
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-2xl font-bold text-navy">
+        <h1 className="page-bar">
           {q ? `ຜົນການຊອກຫາ “${q}”` : (category?.name ?? 'ສິນຄ້າທັງໝົດ')}
         </h1>
         <p className="text-sm text-muted">

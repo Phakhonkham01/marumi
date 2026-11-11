@@ -58,7 +58,7 @@ export default async function EditProductPage(props: PageProps<'/admin/products/
         <ArrowLeftIcon size={16} /> ສິນຄ້າ
       </Link>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-2xl font-bold text-navy">{product.name}</h1>
+        <h1 className="page-bar flex-1">{product.name}</h1>
         <Link href={`/p/${product.slug}`} target="_blank" className="text-sm text-navy-soft underline">
           ເບິ່ງໃນໜ້າຮ້ານ
         </Link>

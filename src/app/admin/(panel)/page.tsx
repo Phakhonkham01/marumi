@@ -57,7 +57,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-navy">ສະບາຍດີ {session.name} ✿</h1>
+      <h1 className="page-bar">ສະບາຍດີ {session.name} ✿</h1>
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Link href="/admin/orders?status=pending" className="card p-4 hover:border-sky">

@@ -1,11 +1,15 @@
 import type { Metadata, Viewport } from 'next'
-import { Noto_Sans_Lao, Quicksand } from 'next/font/google'
-import { DialogProvider } from '@/components/dialog'
+import { Noto_Sans_Lao_Looped } from 'next/font/google'
 import { SHOP } from '@/lib/format'
 import './globals.css'
 
-const lao = Noto_Sans_Lao({ variable: '--font-lao', subsets: ['lao'], weight: ['400', '500', '600', '700'] })
-const latin = Quicksand({ variable: '--font-latin', subsets: ['latin'], weight: ['500', '600', '700'] })
+// One typeface for every page (Lao + Latin), self-hosted by next/font.
+const looped = Noto_Sans_Lao_Looped({
+  variable: '--font-looped',
+  subsets: ['lao', 'latin'],
+  weight: 'variable',
+  display: 'swap',
+})
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'),
@@ -15,15 +19,13 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  themeColor: '#fffaf0',
+  themeColor: '#22396b',
 }
 
 export default function RootLayout({ children }: LayoutProps<'/'>) {
   return (
-    <html lang="lo" className={`${lao.variable} ${latin.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col">
-        <DialogProvider>{children}</DialogProvider>
-      </body>
+    <html lang="lo" className={`${looped.variable} h-full antialiased`}>
+      <body className="min-h-full flex flex-col">{children}</body>
     </html>
   )
 }

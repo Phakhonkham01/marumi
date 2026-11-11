@@ -96,7 +96,7 @@ export function CartView() {
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
       <section className="space-y-3">
-        <h1 className="text-2xl font-bold text-navy">ກະຕ່າສິນຄ້າ</h1>
+        <h1 className="page-bar">ກະຕ່າສິນຄ້າ</h1>
         {notice && <p className="rounded-2xl bg-butter/60 px-4 py-3 text-sm">{notice}</p>}
         {items.map((item) => (
           <div key={item.variantId} className="card flex gap-3 p-3">

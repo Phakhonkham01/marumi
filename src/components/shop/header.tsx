@@ -1,15 +1,90 @@
 'use client'
 
-import Image from 'next/image'
 import Link, { useLinkStatus } from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
-import { BagIcon, SearchIcon, UserIcon } from '@/components/icons'
-import { SHOP } from '@/lib/format'
+import { use, useState } from 'react'
+import { AppShell, FullscreenButton, TopClock, type MenuSection } from '@/components/app-shell'
+import { BagIcon, UserIcon } from '@/components/icons'
+import { SHOP, whatsappLink } from '@/lib/format'
+import type { Category } from '@/lib/types'
 import { useCart } from './cart'
 
-export function ShopHeader() {
+function shopMenu(categories: Category[], cartCount: number): MenuSection[] {
+  return [
+    [
+      { label: 'ໜ້າຫຼັກ', href: '/', icon: 'home' },
+      { label: 'ສິນຄ້າທັງໝົດ', href: '/products', icon: 'grid' },
+      {
+        label: 'ໝວດສິນຄ້າ',
+        href: '#categories',
+        icon: 'tag',
+        children: categories.map((c) => ({ label: c.name, href: `/products?category=${c.slug}` })),
+      },
+      { label: 'ກະຕ່າສິນຄ້າ', href: '/cart', icon: 'bag', badge: cartCount },
+    ],
+    [
+      {
+        label: 'ຕິດຕໍ່ຮ້ານ',
+        href: '#contact',
+        icon: 'chat',
+        children: [
+          { label: 'WhatsApp', href: whatsappLink('ສະບາຍດີ Marumi'), external: true },
+          { label: 'Facebook', href: SHOP.facebook, external: true },
+          { label: `ໂທ ${SHOP.phone}`, href: `tel:${SHOP.phone.replace(/\s/g, '')}`, external: true },
+        ],
+      },
+      // Straight to the static login page; the proxy forwards signed-in staff to /admin.
+      { label: 'ເຂົ້າລະບົບຫຼັງບ້ານ', href: '/admin/login', icon: 'user' },
+    ],
+  ]
+}
+
+export function ShopShell({ categories, children }: { categories: Promise<Category[]>; children: React.ReactNode }) {
   const { count, ready } = useCart()
+  const cartCount = ready ? count : 0
+
+  return (
+    <AppShell
+      brand="Marumi"
+      brandHref="/"
+      sections={shopMenu([], cartCount)}
+      // Only the menu waits for categories; the page itself renders straight away.
+      resolveSections={() => shopMenu(use(categories), cartCount)}
+      exact={['/']}
+      fallbackTitle={SHOP.name}
+      topCenter={<SearchBox />}
+      topRight={
+        <>
+          <TopClock />
+          <FullscreenButton />
+          <Link
+            href="/admin/login"
+            className="flex h-10 shrink-0 items-center gap-1.5 rounded-lg bg-white px-3 font-semibold text-navy hover:bg-butter"
+            aria-label="ເຂົ້າລະບົບ"
+          >
+            <LoginLabel />
+          </Link>
+          <Link
+            href="/cart"
+            className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-butter text-navy hover:bg-butter-deep"
+            aria-label="ກະຕ່າສິນຄ້າ"
+          >
+            <BagIcon size={22} />
+            {cartCount > 0 && (
+              <span className="absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-blush px-1 text-xs font-bold text-white">
+                {cartCount}
+              </span>
+            )}
+          </Link>
+        </>
+      }
+    >
+      {children}
+    </AppShell>
+  )
+}
+
+function SearchBox() {
   const router = useRouter()
   const [query, setQuery] = useState('')
 
@@ -20,62 +95,16 @@ export function ShopHeader() {
   }
 
   return (
-    <header className="sticky top-0 z-30 border-b border-line bg-cream/90 backdrop-blur">
-      <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3">
-        <Link href="/" className="flex shrink-0 items-center gap-2">
-          <Image
-            src="/logo.jpg"
-            alt={SHOP.name}
-            width={44}
-            height={44}
-            className="rounded-full ring-2 ring-sky"
-            priority
-          />
-          <span className="hidden leading-tight sm:block">
-            <span className="block font-display text-lg font-bold text-navy">Marumi</span>
-            <span className="block text-xs text-muted">Phonecase</span>
-          </span>
-        </Link>
-
-        <form onSubmit={onSearch} className="relative flex-1">
-          <SearchIcon size={18} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="ຊອກຫາເຄສ, ແບັດສຳຮອງ..."
-            className="input rounded-full! pl-9"
-            enterKeyHint="search"
-          />
-        </form>
-
-        <Link href="/products" className="hidden font-semibold text-navy md:block">
-          ສິນຄ້າທັງໝົດ
-        </Link>
-
-        {/* Straight to the static login page (prefetched, so it opens instantly);
-            the proxy forwards signed-in staff on to /admin. */}
-        <Link
-          href="/admin/login"
-          className="flex h-11 min-w-11 shrink-0 items-center justify-center gap-1.5 rounded-full border-[1.5px] border-line bg-white px-3 font-semibold text-navy hover:border-sky"
-          aria-label="ເຂົ້າລະບົບ"
-        >
-          <LoginLabel />
-        </Link>
-
-        <Link
-          href="/cart"
-          className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-[1.5px] border-navy bg-butter text-navy"
-          aria-label="ກະຕ່າສິນຄ້າ"
-        >
-          <BagIcon size={22} />
-          {ready && count > 0 && (
-            <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-navy px-1 text-xs font-bold text-white">
-              {count}
-            </span>
-          )}
-        </Link>
-      </div>
-    </header>
+    <form onSubmit={onSearch} className="panel-search mx-auto w-full max-w-lg">
+      <input
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="ຊອກຫາເຄສ, ແບັດສຳຮອງ..."
+        enterKeyHint="search"
+        aria-label="ຄົ້ນຫາສິນຄ້າ"
+      />
+      <button type="submit">ຄົ້ນຫາ</button>
+    </form>
   )
 }
 

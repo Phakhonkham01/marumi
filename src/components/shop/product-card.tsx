@@ -3,56 +3,85 @@ import Link from 'next/link'
 import { formatKip, imageUrl, minPrice, sortedImages, totalStock } from '@/lib/format'
 import type { ProductWithRelations } from '@/lib/types'
 
+/** SaArdPOS-style tile body: category tag, square photo, navy footer with name, price and stock. */
+export function TileBody({
+  name,
+  category,
+  image,
+  price,
+  priceNote,
+  stock,
+  badge,
+}: {
+  name: string
+  category?: string | null
+  image?: string | null
+  price: string
+  priceNote?: string
+  stock: number
+  badge?: React.ReactNode
+}) {
+  return (
+    <>
+      <div className="relative aspect-[4/3] bg-white">
+        {category && <span className="pcard-tag">{category}</span>}
+        {badge}
+        <Image
+          src={imageUrl(image)}
+          alt={name}
+          fill
+          sizes="(min-width: 1280px) 20vw, (min-width: 640px) 33vw, 50vw"
+          className={image ? 'object-cover' : 'object-contain p-8 opacity-40 grayscale'}
+        />
+      </div>
+      <div className="pcard-foot">
+        <p className="truncate text-sm font-semibold">{name}</p>
+        <hr />
+        <div className="flex items-baseline justify-between gap-2 text-sm">
+          <span className="font-bold">
+            {priceNote && <span className="text-xs font-normal text-white/70">{priceNote} </span>}
+            {price}
+          </span>
+          <span className={`text-xs font-semibold ${stock === 0 ? 'text-blush' : 'text-white/80'}`}>
+            {stock === 0 ? 'ໝົດ' : `Stock ${stock}`}
+          </span>
+        </div>
+      </div>
+    </>
+  )
+}
+
 export function ProductCard({ product }: { product: ProductWithRelations }) {
   const cover = sortedImages(product)[0]
   const stock = totalStock(product)
   const price = minPrice(product)
   const hasRange = new Set(product.product_variants.map((v) => v.price_lak ?? product.price_lak)).size > 1
+  const onSale = !!product.compare_at_lak && product.compare_at_lak > price
 
   return (
-    <Link href={`/p/${product.slug}`} className="card group flex flex-col overflow-hidden transition hover:-translate-y-0.5 hover:border-sky">
-      <div className="relative aspect-square bg-mist">
-        <Image
-          src={imageUrl(cover?.path)}
-          alt={product.name}
-          fill
-          sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
-          className={cover ? 'object-cover' : 'object-contain p-8 opacity-60'}
-        />
-        {stock === 0 ? (
-          <span className="absolute left-2 top-2 rounded-full bg-ink/80 px-2.5 py-1 text-xs font-semibold text-white">
-            ໝົດຊົ່ວຄາວ
-          </span>
-        ) : stock <= 3 ? (
-          <span className="absolute left-2 top-2 rounded-full bg-blush px-2.5 py-1 text-xs font-semibold text-ink">
-            ເຫຼືອ {stock} ຊິ້ນ
-          </span>
-        ) : null}
-        {product.compare_at_lak && product.compare_at_lak > price && (
-          <span className="absolute right-2 top-2 rounded-full border border-navy bg-butter px-2.5 py-1 text-xs font-bold text-navy">
-            SALE
-          </span>
-        )}
-      </div>
-      <div className="flex flex-1 flex-col gap-1 p-3">
-        <p className="line-clamp-2 font-semibold leading-snug">{product.name}</p>
-        <div className="mt-auto flex flex-wrap items-baseline gap-x-2">
-          <span className="font-bold text-navy">
-            {hasRange && <span className="text-xs font-normal text-muted">ເລີ່ມ </span>}
-            {formatKip(price)}
-          </span>
-          {product.compare_at_lak && product.compare_at_lak > price && (
-            <span className="text-xs text-muted line-through">{formatKip(product.compare_at_lak)}</span>
-          )}
-        </div>
-      </div>
+    <Link href={`/p/${product.slug}`} className={`pcard ${stock === 0 ? 'opacity-70' : ''}`}>
+      <TileBody
+        name={product.name}
+        category={product.categories?.name}
+        image={cover?.path}
+        price={formatKip(price)}
+        priceNote={hasRange ? 'ເລີ່ມ' : undefined}
+        stock={stock}
+        badge={
+          onSale && (
+            <span className="absolute right-2 top-2 z-[1] rounded-md bg-butter px-2 py-0.5 text-xs font-bold text-navy">
+              SALE
+            </span>
+          )
+        }
+      />
     </Link>
   )
 }
 
 export function ProductGrid({ products }: { products: ProductWithRelations[] }) {
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
       {products.map((p) => (
         <ProductCard key={p.id} product={p} />
       ))}

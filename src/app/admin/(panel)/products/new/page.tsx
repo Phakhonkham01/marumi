@@ -17,7 +17,7 @@ export default async function NewProductPage() {
       <Link href="/admin/products" className="inline-flex items-center gap-1 text-sm text-muted">
         <ArrowLeftIcon size={16} /> ສິນຄ້າ
       </Link>
-      <h1 className="text-2xl font-bold text-navy">ເພີ່ມສິນຄ້າໃໝ່</h1>
+      <h1 className="page-bar">ເພີ່ມສິນຄ້າໃໝ່</h1>
       <ProductForm
         categories={(categories as Category[]) ?? []}
         models={(models as DeviceModel[]) ?? []}

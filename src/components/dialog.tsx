@@ -1,12 +1,12 @@
 'use client'
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import Swal, { type SweetAlertIcon } from 'sweetalert2'
 
 type Tone = 'success' | 'error' | 'warning' | 'info'
 
 type DialogOptions = {
   title: string
-  message?: ReactNode
+  message?: string
   tone?: Tone
   okLabel?: string
   cancelLabel?: string
@@ -14,100 +14,51 @@ type DialogOptions = {
   danger?: boolean
 }
 
-type Request = DialogOptions & { kind: 'alert' | 'confirm'; resolve: (ok: boolean) => void }
+// Brand-styled SweetAlert2; buttons reuse the app's .btn classes.
+const popupClass = (danger?: boolean) => ({
+  popup: 'swal-marumi',
+  confirmButton: `btn min-w-28 ${danger ? 'btn-solid-danger' : 'btn-primary'}`,
+  cancelButton: 'btn btn-ghost min-w-28',
+  actions: 'gap-2',
+})
 
-type DialogApi = {
-  alert: (options: DialogOptions) => Promise<void>
-  confirm: (options: DialogOptions) => Promise<boolean>
+const Popup = Swal.mixin({ buttonsStyling: false, reverseButtons: true, customClass: popupClass() })
+
+const Toast = Swal.mixin({
+  toast: true,
+  position: 'top-end',
+  showConfirmButton: false,
+  timer: 2200,
+  timerProgressBar: true,
+  customClass: { popup: 'swal-marumi' },
+})
+
+async function alert({ title, message, tone = 'info', okLabel = 'ຕົກລົງ' }: DialogOptions) {
+  // Successes are toasts so staff can keep working; everything else waits for OK.
+  if (tone === 'success') {
+    await Toast.fire({ icon: 'success', title, text: message })
+    return
+  }
+  await Popup.fire({ icon: tone as SweetAlertIcon, title, text: message, confirmButtonText: okLabel })
 }
 
-const DialogContext = createContext<DialogApi | null>(null)
-
-const TONE: Record<Tone, { icon: string; ring: string }> = {
-  success: { icon: '✓', ring: 'bg-success/15 text-success' },
-  error: { icon: '✕', ring: 'bg-danger/15 text-danger' },
-  warning: { icon: '!', ring: 'bg-butter text-navy' },
-  info: { icon: 'i', ring: 'bg-mist text-navy' },
+async function confirm({ title, message, tone = 'warning', okLabel = 'ຕົກລົງ', cancelLabel = 'ຍົກເລີກ', danger }: DialogOptions) {
+  const result = await Popup.fire({
+    icon: tone as SweetAlertIcon,
+    title,
+    text: message,
+    showCancelButton: true,
+    confirmButtonText: okLabel,
+    cancelButtonText: cancelLabel,
+    focusCancel: danger,
+    customClass: popupClass(danger),
+  })
+  return result.isConfirmed
 }
 
-/** Popup modal for results and confirmations. Requests queue, so nothing is lost when two fire at once. */
-export function DialogProvider({ children }: { children: ReactNode }) {
-  const [queue, setQueue] = useState<Request[]>([])
-  const ref = useRef<HTMLDialogElement>(null)
-  const current = queue[0]
+const api = { alert, confirm }
 
-  useEffect(() => {
-    const el = ref.current
-    if (current && el && !el.open) el.showModal()
-  }, [current])
-
-  const close = useCallback(
-    (ok: boolean) => {
-      if (!current) return
-      current.resolve(ok)
-      ref.current?.close()
-      setQueue((q) => q.slice(1))
-    },
-    [current],
-  )
-
-  const api = useMemo<DialogApi>(
-    () => ({
-      alert: (options) =>
-        new Promise((resolve) => setQueue((q) => [...q, { ...options, kind: 'alert', resolve: () => resolve() }])),
-      confirm: (options) =>
-        new Promise((resolve) => setQueue((q) => [...q, { ...options, kind: 'confirm', resolve }])),
-    }),
-    [],
-  )
-
-  const tone = TONE[current?.tone ?? (current?.kind === 'confirm' ? 'warning' : 'info')]
-
-  return (
-    <DialogContext.Provider value={api}>
-      {children}
-      <dialog
-        ref={ref}
-        // Esc closes the native dialog; treat it as "cancel".
-        onCancel={(e) => {
-          e.preventDefault()
-          close(false)
-        }}
-        onClick={(e) => e.target === e.currentTarget && close(false)}
-        className="m-auto w-[calc(100%-2rem)] max-w-sm rounded-[var(--radius-card)] border-[1.5px] border-line bg-white p-0 text-ink shadow-xl backdrop:bg-ink/40"
-      >
-        {current && (
-          <div className="space-y-4 p-6 text-center">
-            <span className={`mx-auto flex h-12 w-12 items-center justify-center rounded-full text-xl font-bold ${tone.ring}`}>
-              {tone.icon}
-            </span>
-            <div className="space-y-1">
-              <p className="text-lg font-bold text-navy">{current.title}</p>
-              {current.message && <div className="text-sm text-muted">{current.message}</div>}
-            </div>
-            <div className="flex gap-2">
-              {current.kind === 'confirm' && (
-                <button className="btn btn-ghost flex-1" onClick={() => close(false)}>
-                  {current.cancelLabel ?? 'ຍົກເລີກ'}
-                </button>
-              )}
-              <button
-                autoFocus
-                className={`btn flex-1 ${current.danger ? 'bg-danger text-white hover:opacity-90' : 'btn-primary'}`}
-                onClick={() => close(true)}
-              >
-                {current.okLabel ?? 'ຕົກລົງ'}
-              </button>
-            </div>
-          </div>
-        )}
-      </dialog>
-    </DialogContext.Provider>
-  )
-}
-
+/** SweetAlert2 popups: `alert` for results, `confirm` resolves true when the user accepts. */
 export function useDialog() {
-  const api = useContext(DialogContext)
-  if (!api) throw new Error('useDialog must be used inside <DialogProvider>')
   return api
 }

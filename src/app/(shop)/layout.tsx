@@ -1,42 +1,19 @@
-import Link from 'next/link'
-import { ChatIcon, PhoneIcon } from '@/components/icons'
 import { CartProvider } from '@/components/shop/cart'
-import { ShopHeader } from '@/components/shop/header'
-import { SHOP, whatsappLink } from '@/lib/format'
+import { ShopShell } from '@/components/shop/header'
+import { SHOP } from '@/lib/format'
+import { getCategories } from '@/lib/queries'
 
 export default function ShopLayout({ children }: LayoutProps<'/'>) {
+  // Not awaited: the shell streams the category menu in without blocking the page.
+  const categories = getCategories()
   return (
     <CartProvider>
-      <ShopHeader />
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 pb-16 pt-4">{children}</main>
-      <footer className="bg-waves border-t border-line">
-        <div className="mx-auto grid max-w-6xl gap-6 px-4 py-10 sm:grid-cols-3">
-          <div>
-            <p className="font-display text-xl font-bold text-navy">{SHOP.name}</p>
-            <p className="text-navy">{SHOP.nameLo}</p>
-            <p className="mt-2 text-sm text-muted">{SHOP.tagline}</p>
-          </div>
-          <div className="space-y-2 text-sm">
-            <p className="font-semibold text-navy">ຕິດຕໍ່ຮ້ານ</p>
-            <a href={`tel:${SHOP.phone.replace(/\s/g, '')}`} className="flex items-center gap-2">
-              <PhoneIcon size={16} /> {SHOP.phone}
-            </a>
-            <a href={whatsappLink('ສະບາຍດີ Marumi')} target="_blank" rel="noreferrer" className="flex items-center gap-2">
-              <ChatIcon size={16} /> WhatsApp
-            </a>
-            <a href={SHOP.facebook} target="_blank" rel="noreferrer" className="flex items-center gap-2">
-              <ChatIcon size={16} /> Facebook
-            </a>
-          </div>
-          <div className="text-sm text-muted sm:text-right">
-            <p>ຮັບທີ່ຮ້ານ ຫຼື ສົ່ງທົ່ວປະເທດ</p>
-            <p>© {SHOP.name}</p>
-            <Link href="/admin/login" className="mt-2 inline-block underline">
-              ເຂົ້າລະບົບຫຼັງບ້ານ
-            </Link>
-          </div>
-        </div>
-      </footer>
+      <ShopShell categories={categories}>
+        <div className="mx-auto w-full max-w-7xl">{children}</div>
+        <footer className="mx-auto mt-10 max-w-7xl border-t border-line pt-4 text-center text-xs text-muted">
+          © {SHOP.name} · {SHOP.nameLo} · {SHOP.phone}
+        </footer>
+      </ShopShell>
     </CartProvider>
   )
 }

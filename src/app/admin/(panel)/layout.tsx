@@ -1,21 +1,25 @@
 import type { Metadata } from 'next'
 import Image from 'next/image'
 import { Suspense } from 'react'
-import { AdminNav, SignOutButton } from '@/components/admin/nav'
-import { getStaffSession } from '@/lib/supabase/server'
+import { AdminShell, SignOutButton } from '@/components/admin/nav'
+import { createClient, getStaffSession } from '@/lib/supabase/server'
 
 export const metadata: Metadata = { title: 'ຫຼັງບ້ານ', robots: { index: false } }
 
 export default function PanelLayout({ children }: LayoutProps<'/admin'>) {
   return (
-    <Suspense fallback={<div className="p-8 text-muted">ກຳລັງໂຫຼດ...</div>}>
+    <Suspense fallback={<div className="flex min-h-dvh"><div className="hidden w-64 bg-navy lg:block" /><div className="flex-1 bg-[#eef2f8]"><div className="h-20 bg-navy" /></div></div>}>
       <Gate>{children}</Gate>
     </Suspense>
   )
 }
 
 async function Gate({ children }: { children: React.ReactNode }) {
-  const session = await getStaffSession()
+  const supabase = await createClient()
+  const [session, pending] = await Promise.all([
+    getStaffSession(),
+    supabase.from('orders').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+  ])
   if (!session) {
     return (
       <div className="bg-waves flex min-h-dvh flex-col items-center justify-center gap-3 p-6 text-center">
@@ -27,9 +31,8 @@ async function Gate({ children }: { children: React.ReactNode }) {
     )
   }
   return (
-    <div className="flex min-h-dvh flex-col bg-cream md:flex-row">
-      <AdminNav name={session.name} role={session.role} />
-      <main className="mx-auto w-full max-w-5xl flex-1 px-4 pb-28 pt-4 md:px-8 md:pb-10 md:pt-8">{children}</main>
-    </div>
+    <AdminShell name={session.name} role={session.role} pending={pending.count ?? 0}>
+      {children}
+    </AdminShell>
   )
 }

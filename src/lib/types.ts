@@ -35,6 +35,7 @@ export type Product = {
 export type ProductWithRelations = Product & {
   product_images: ProductImage[]
   product_variants: Variant[]
+  categories: { name: string; slug: string } | null
 }
 
 export type OrderStatus = 'pending' | 'confirmed' | 'completed' | 'cancelled'
@@ -71,4 +72,4 @@ export type OrderItem = {
 
 /** Columns selected for product cards and detail pages. */
 export const PRODUCT_SELECT =
-  '*, product_images(id, product_id, path, sort), product_variants(id, product_id, name, device_model_id, price_lak, stock, sort, is_active)'
+  '*, categories(name, slug), product_images(id, product_id, path, sort), product_variants(id, product_id, name, device_model_id, price_lak, stock, sort, is_active)'

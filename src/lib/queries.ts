@@ -41,7 +41,7 @@ export async function listProducts(opts: ListOptions = {}): Promise<ProductWithR
   let select = opts.deviceModelId
     ? PRODUCT_SELECT.replace('product_variants(', 'product_variants!inner(')
     : PRODUCT_SELECT
-  if (opts.categorySlug) select += ', categories!inner(slug)'
+  if (opts.categorySlug) select = select.replace('categories(', 'categories!inner(')
   let query = createCatalogClient().from('products').select(select).eq('is_active', true)
 
   if (opts.categorySlug) query = query.eq('categories.slug', opts.categorySlug)

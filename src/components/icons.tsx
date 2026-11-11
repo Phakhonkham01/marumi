@@ -115,3 +115,53 @@ export const UserIcon = (p: IconProps) => (
     <path d="M4.5 20.5a7.5 7.5 0 0 1 15 0" />
   </Icon>
 )
+export const MenuIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M4 6h16M4 12h16M4 18h16" />
+  </Icon>
+)
+export const ClockIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <circle cx="12" cy="12" r="8.5" />
+    <path d="M12 7.5V12l3 2" />
+  </Icon>
+)
+export const ExpandIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />
+  </Icon>
+)
+export const BellIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15L6 16ZM10 20.5a2 2 0 0 0 4 0" />
+  </Icon>
+)
+export const LogoutIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 16l-4-4 4-4M6 12h10" />
+  </Icon>
+)
+export const ChevronDownIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="m6 9 6 6 6-6" />
+  </Icon>
+)
+export const GridIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <rect x="4" y="4" width="6.5" height="6.5" rx="1" />
+    <rect x="13.5" y="4" width="6.5" height="6.5" rx="1" />
+    <rect x="4" y="13.5" width="6.5" height="6.5" rx="1" />
+    <rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1" />
+  </Icon>
+)
+export const TagIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M3.5 12.5V4.5a1 1 0 0 1 1-1h8l8 8-9 9-8-8Z" />
+    <circle cx="8" cy="8" r="1.5" />
+  </Icon>
+)
+export const StoreIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M4 9.5 5.5 4h13L20 9.5M4 9.5a2.7 2.7 0 0 0 5.3 0 2.7 2.7 0 0 0 5.4 0 2.7 2.7 0 0 0 5.3 0M5 11.5V20h14v-8.5M10 20v-5h4v5" />
+  </Icon>
+)

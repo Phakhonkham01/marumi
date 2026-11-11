@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { formatDateTime } from '@/lib/dates'
-import { formatKip, STATUS_LABEL, STATUS_STYLE } from '@/lib/format'
+import { ReceiptIcon } from '@/components/icons'
+import { formatKip, PAYMENT_LABEL, STATUS_LABEL, STATUS_STYLE } from '@/lib/format'
 import { createClient } from '@/lib/supabase/server'
 import type { Order, OrderStatus } from '@/lib/types'
 
@@ -23,40 +24,80 @@ export default async function OrdersPage(props: PageProps<'/admin/orders'>) {
   const orders = (data as Order[]) ?? []
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-bold text-navy">ອໍເດີ</h1>
-      <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4">
-        {TABS.map((t) => (
-          <Link key={t.value} href={`/admin/orders?status=${t.value}`} className="chip" data-active={t.value === status}>
-            {t.label}
-          </Link>
-        ))}
+    <section className="panel">
+      <div className="panel-head">
+        <span className="panel-title">
+          <ReceiptIcon size={22} /> ອໍເດີ ({orders.length})
+        </span>
+        <div className="no-scrollbar flex gap-1.5 overflow-x-auto">
+          {TABS.map((t) => (
+            <Link
+              key={t.value}
+              href={`/admin/orders?status=${t.value}`}
+              className={`panel-btn ${t.value === status ? 'bg-butter!' : 'bg-white/90!'}`}
+            >
+              {t.label}
+            </Link>
+          ))}
+        </div>
       </div>
 
-      <div className="card divide-y divide-line">
-        {orders.map((o) => (
-          <Link key={o.id} href={`/admin/orders/${o.id}`} className="flex items-center gap-3 p-3 hover:bg-mist/50">
-            <div className="min-w-0 flex-1">
-              <p className="font-semibold">
-                {o.customer_name}
-                <span className="ml-2 font-display text-xs text-muted">{o.code}</span>
-              </p>
-              <p className="text-xs text-muted">
-                {formatDateTime(o.created_at)} · {o.channel === 'store' ? 'ໜ້າຮ້ານ' : 'ອອນລາຍ'}
-                {o.channel === 'online' && ` · ${o.delivery_method === 'delivery' ? 'ຈັດສົ່ງ' : 'ຮັບທີ່ຮ້ານ'}`}
-                {o.payment_slip_path && ' · 🧾 ມີບິນໂອນ'}
-              </p>
-            </div>
-            <div className="text-right">
-              <p className="font-bold text-navy">{formatKip(o.total_lak)}</p>
-              <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${STATUS_STYLE[o.status]}`}>
-                {STATUS_LABEL[o.status]}
-              </span>
-            </div>
-          </Link>
-        ))}
-        {orders.length === 0 && <p className="p-6 text-center text-muted">ບໍ່ມີອໍເດີ</p>}
+      <div className="overflow-x-auto">
+        <table className="data-table">
+          <thead>
+            <tr>
+              <th>ລະຫັດ</th>
+              <th>ວັນທີ</th>
+              <th>ລູກຄ້າ</th>
+              <th>ຊ່ອງທາງ</th>
+              <th>ການຊຳລະ</th>
+              <th className="text-right!">ຍອດລວມ</th>
+              <th>ສະຖານະ</th>
+              <th className="text-center!">ຈັດການ</th>
+            </tr>
+          </thead>
+          <tbody>
+            {orders.map((o) => (
+              <tr key={o.id}>
+                <td className="font-semibold whitespace-nowrap">{o.code}</td>
+                <td className="whitespace-nowrap text-muted">{formatDateTime(o.created_at)}</td>
+                <td>
+                  <span className="font-semibold">{o.customer_name}</span>
+                  {o.customer_phone && <span className="block text-xs text-muted">{o.customer_phone}</span>}
+                </td>
+                <td className="whitespace-nowrap">
+                  {o.channel === 'store' ? 'ໜ້າຮ້ານ' : o.delivery_method === 'delivery' ? 'ອອນລາຍ · ຈັດສົ່ງ' : 'ອອນລາຍ · ຮັບທີ່ຮ້ານ'}
+                </td>
+                <td className="whitespace-nowrap">
+                  {PAYMENT_LABEL[o.payment_method]}
+                  {o.payment_slip_path && <span className="ml-1 text-xs">🧾</span>}
+                </td>
+                <td className="num font-bold text-navy">{formatKip(o.total_lak)}</td>
+                <td>
+                  <span className={`whitespace-nowrap rounded px-2 py-0.5 text-xs font-semibold ${STATUS_STYLE[o.status]}`}>
+                    {STATUS_LABEL[o.status]}
+                  </span>
+                </td>
+                <td className="text-center">
+                  <Link
+                    href={`/admin/orders/${o.id}`}
+                    className="inline-flex rounded-md bg-navy px-3 py-1.5 text-xs font-semibold whitespace-nowrap text-white hover:bg-navy-soft"
+                  >
+                    ເບິ່ງລາຍລະອຽດ
+                  </Link>
+                </td>
+              </tr>
+            ))}
+            {orders.length === 0 && (
+              <tr>
+                <td colSpan={8} className="py-10 text-center text-muted">
+                  ບໍ່ມີອໍເດີ
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
       </div>
-    </div>
+    </section>
   )
 }
