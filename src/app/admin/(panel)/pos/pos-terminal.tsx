@@ -3,7 +3,7 @@
 import { refreshCatalog } from '@/app/admin/actions'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useDialog } from '@/components/dialog'
 import { BagIcon, CashIcon, MinusIcon, PlusIcon, TrashIcon } from '@/components/icons'
 import { TileBody } from '@/components/shop/product-card'
@@ -25,6 +25,14 @@ export function PosTerminal({ products }: { products: ProductWithRelations[] }) 
   const [customer, setCustomer] = useState('')
   const [busy, setBusy] = useState(false)
   const [done, setDone] = useState<string | null>(null)
+  const linesRef = useRef<HTMLDivElement>(null)
+  const lineCount = lines.length
+
+  // Keep the newest line in view when one is added to a long bill.
+  useEffect(() => {
+    const el = linesRef.current
+    if (el) el.scrollTop = el.scrollHeight
+  }, [lineCount])
 
   const term = search.trim().toLowerCase()
   const categories = [...new Set(products.map((p) => p.categories?.name).filter((c): c is string => !!c))]
@@ -87,7 +95,7 @@ export function PosTerminal({ products }: { products: ProductWithRelations[] }) 
   }
 
   return (
-    <div className="grid gap-4 xl:grid-cols-[1fr_380px]">
+    <div className="grid items-start gap-4 xl:grid-cols-[1fr_380px]">
       <section className="panel">
         <div className="panel-head">
           <span className="panel-title">
@@ -106,7 +114,7 @@ export function PosTerminal({ products }: { products: ProductWithRelations[] }) 
             ))}
           </select>
         </div>
-        <div className="grid max-h-[calc(100dvh-13rem)] grid-cols-2 gap-4 overflow-y-auto bg-[#f4f7fb] p-4 sm:grid-cols-3 2xl:grid-cols-4">
+        <div className="grid grid-cols-2 gap-4 bg-[#f4f7fb] p-4 sm:grid-cols-3 2xl:grid-cols-4">
           {visible.map((p) => {
             const stock = activeVariants(p).reduce((n, v) => n + v.stock, 0)
             const prices = activeVariants(p).map((v) => variantPrice(p, v))
@@ -126,7 +134,8 @@ export function PosTerminal({ products }: { products: ProductWithRelations[] }) 
         </div>
       </section>
 
-      <section className="panel flex h-fit flex-col xl:sticky xl:top-24">
+      {/* The bill stays in view while the product list scrolls with the page. */}
+      <section className="panel flex flex-col xl:sticky xl:top-24 xl:max-h-[calc(100dvh-7.5rem)]">
         <div className="panel-head">
           <span className="panel-title">
             <BagIcon size={22} /> ບິນ
@@ -136,7 +145,8 @@ export function PosTerminal({ products }: { products: ProductWithRelations[] }) 
           </button>
         </div>
 
-        <div className="min-h-48 space-y-2 bg-[#f4f7fb] p-3">
+        {/* About five lines fit; longer bills scroll inside this list. */}
+        <div ref={linesRef} className="max-h-[33rem] min-h-48 flex-1 space-y-2 overflow-y-auto overscroll-contain bg-[#f4f7fb] p-3">
           {done && (
             <p className="rounded-md bg-success/10 px-3 py-2 text-sm text-success">
               ✓ ບັນທຶກແລ້ວ{' '}
@@ -190,7 +200,7 @@ export function PosTerminal({ products }: { products: ProductWithRelations[] }) 
           ))}
         </div>
 
-        <div className="space-y-3 border-t border-line p-3">
+        <div className="shrink-0 space-y-3 border-t border-line p-3">
           <div className="grid grid-cols-2 gap-2">
             <input className="input" inputMode="numeric" value={discount} onChange={(e) => setDiscount(e.target.value)} placeholder="ສ່ວນຫຼຸດ (ກີບ)" />
             <input className="input" value={customer} onChange={(e) => setCustomer(e.target.value)} placeholder="ຊື່ລູກຄ້າ (ບໍ່ບັງຄັບ)" />
