@@ -86,6 +86,8 @@ const ERROR_LABEL: Record<string, string> = {
   insufficient_stock: 'ສິນຄ້າໃນສະຕັອກບໍ່ພໍ',
   invalid_transition: 'ປ່ຽນສະຖານະນີ້ບໍ່ໄດ້',
   invalid_discount: 'ສ່ວນຫຼຸດບໍ່ຖືກຕ້ອງ',
+  barcode_taken: 'ລະຫັດບາໂຄ້ດນີ້ຖືກໃຊ້ກັບສິນຄ້າອື່ນແລ້ວ',
+  invalid_barcode: 'ລະຫັດບາໂຄ້ດບໍ່ຖືກຕ້ອງ (ໃຊ້ໄດ້ສະເພາະຕົວເລກ, A-Z ແລະ -)',
   invalid_slip: 'ບິນໂອນບໍ່ຖືກຕ້ອງ ກະລຸນາແນບໃໝ່',
   forbidden: 'ບໍ່ມີສິດ',
   forbidden_cost: 'ສະເພາະເຈົ້າຂອງຮ້ານທີ່ໃສ່ຕົ້ນທຶນໄດ້',

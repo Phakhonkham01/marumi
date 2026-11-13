@@ -102,11 +102,11 @@ export function AppShell({
   }
 
   return (
-    <div className="flex min-h-dvh bg-[#eef2f8]">
+    <div className="flex min-h-dvh bg-[#eef2f8] print:block print:bg-white">
       {drawer && <div className="fixed inset-0 z-40 bg-ink/40 lg:hidden" onClick={() => setDrawer(false)} />}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-navy text-white transition-transform lg:sticky lg:top-0 lg:h-dvh lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-navy text-white transition-transform print:hidden lg:sticky lg:top-0 lg:h-dvh lg:translate-x-0 ${
           drawer ? 'translate-x-0' : '-translate-x-full'
         } ${collapsed ? 'lg:hidden' : ''}`}
       >
@@ -125,7 +125,7 @@ export function AppShell({
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-30 flex h-16 items-stretch bg-navy text-white shadow lg:h-20">
+        <header className="sticky top-0 z-30 flex h-16 items-stretch bg-navy text-white shadow print:hidden lg:h-20">
           <div className="flex items-center gap-3 bg-butter pl-3 pr-10 text-navy [clip-path:polygon(0_0,100%_0,calc(100%-1.75rem)_100%,0_100%)] sm:pl-4">
             <button
               onClick={toggleMenu}
@@ -147,9 +147,9 @@ export function AppShell({
           </div>
         </header>
 
-        {topCenter && <div className="bg-navy px-3 pb-3 md:hidden">{topCenter}</div>}
+        {topCenter && <div className="bg-navy px-3 pb-3 print:hidden md:hidden">{topCenter}</div>}
 
-        <main className="min-w-0 flex-1 p-3 sm:p-5">{children}</main>
+        <main className="min-w-0 flex-1 p-3 sm:p-5 print:p-0">{children}</main>
       </div>
     </div>
   )

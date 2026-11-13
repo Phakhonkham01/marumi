@@ -56,7 +56,30 @@ async function confirm({ title, message, tone = 'warning', okLabel = 'ຕົກ�
   return result.isConfirmed
 }
 
-const api = { alert, confirm }
+/** Two actions plus cancel; resolves 'ok', 'alt' or null. */
+async function choose({
+  title,
+  message,
+  tone = 'question' as Tone,
+  okLabel,
+  altLabel,
+  cancelLabel = 'ຍົກເລີກ',
+}: Omit<DialogOptions, 'okLabel' | 'tone'> & { tone?: Tone | 'question'; okLabel: string; altLabel: string }) {
+  const result = await Popup.fire({
+    icon: tone as SweetAlertIcon,
+    title,
+    text: message,
+    showDenyButton: true,
+    showCancelButton: true,
+    confirmButtonText: okLabel,
+    denyButtonText: altLabel,
+    cancelButtonText: cancelLabel,
+    customClass: { ...popupClass(), denyButton: 'btn btn-butter min-w-28' },
+  })
+  return result.isConfirmed ? 'ok' : result.isDenied ? 'alt' : null
+}
+
+const api = { alert, confirm, choose }
 
 /** SweetAlert2 popups: `alert` for results, `confirm` resolves true when the user accepts. */
 export function useDialog() {

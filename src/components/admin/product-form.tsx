@@ -4,8 +4,10 @@ import { refreshCatalog } from '@/app/admin/actions'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
+import { CameraScanner } from '@/components/camera-scanner'
 import { useDialog } from '@/components/dialog'
-import { PlusIcon, TrashIcon, UploadIcon } from '@/components/icons'
+import { CameraIcon, PlusIcon, TrashIcon, UploadIcon } from '@/components/icons'
+import { generateShopBarcode, looksLikeBarcode, normalizeBarcode } from '@/lib/barcode'
 import { compressImage, extensionFor } from '@/lib/image'
 import { errorMessage, formatKip, imageUrl } from '@/lib/format'
 import { createClient } from '@/lib/supabase/client'
@@ -20,6 +22,7 @@ type VariantRow = {
   price: string
   initialStock: string
   cost: string
+  barcode: string
   is_active: boolean
 }
 
@@ -44,17 +47,21 @@ export function ProductForm({
   models,
   costs,
   isOwner,
+  initialBarcode = '',
 }: {
   product?: ProductWithRelations
   categories: Category[]
   models: DeviceModel[]
   costs: Record<number, number>
   isOwner: boolean
+  /** Prefills the first variant when a product is created from an unknown scan. */
+  initialBarcode?: string
 }) {
   const router = useRouter()
   const dialog = useDialog()
   const fileInput = useRef<HTMLInputElement>(null)
   const [saving, setSaving] = useState(false)
+  const [scanningKey, setScanningKey] = useState<string | null>(null)
 
   const [name, setName] = useState(product?.name ?? '')
   const [categoryId, setCategoryId] = useState<number | ''>(product?.category_id ?? categories[0]?.id ?? '')
@@ -82,9 +89,10 @@ export function ProductForm({
         price: v.price_lak == null ? '' : String(v.price_lak),
         initialStock: '',
         cost: costs[v.id] == null ? '' : String(costs[v.id]),
+        barcode: v.barcode ?? '',
         is_active: v.is_active,
       }))
-    return rows.length ? rows : [blankVariant('ມາດຕະຖານ')]
+    return rows.length ? rows : [{ ...blankVariant('ມາດຕະຖານ'), barcode: initialBarcode }]
   })
 
   imagesRef.current = images
@@ -102,6 +110,7 @@ export function ProductForm({
       price: '',
       initialStock: '0',
       cost: '',
+      barcode: '',
       is_active: true,
     }
   }
@@ -158,6 +167,9 @@ export function ProductForm({
     if (basePrice == null) return missing('ລາຄາຂາຍຕ້ອງເປັນຈຳນວນເຕັມ 0–2,147,483,647 ກີບ')
     if (variants.length === 0) return missing('ຕ້ອງມີຢ່າງໜ້ອຍ 1 ຕົວເລືອກ')
     if (variants.some((v) => !v.name.trim())) return missing('ກະລຸນາໃສ່ຊື່ຕົວເລືອກໃຫ້ຄົບ')
+    const barcodes = variants.map((v) => v.barcode).filter(Boolean)
+    if (barcodes.some((b) => !looksLikeBarcode(b))) return missing('ບາໂຄ້ດບໍ່ຖືກຕ້ອງ: ໃຊ້ໄດ້ສະເພາະຕົວເລກ, A-Z ແລະ - (4–64 ຕົວ)')
+    if (new Set(barcodes).size !== barcodes.length) return missing('ມີບາໂຄ້ດຊ້ຳກັນໃນສິນຄ້ານີ້')
     const comparePrice = toInt(compareAt)
     if (compareAt.trim() && comparePrice == null) return missing('ລາຄາກ່ອນຫຼຸດຕ້ອງເປັນຈຳນວນເຕັມ 0–2,147,483,647 ກີບ')
     if (comparePrice != null && comparePrice <= basePrice) return missing('ລາຄາກ່ອນຫຼຸດຕ້ອງສູງກວ່າລາຄາຂາຍ')
@@ -201,6 +213,7 @@ export function ProductForm({
           price_lak: toInt(v.price) ?? '',
           initial_stock: toInt(v.initialStock) ?? 0,
           cost_lak: isOwner ? toInt(v.cost) ?? '' : '',
+          barcode: v.barcode,
           sort,
           is_active: v.is_active,
         })),
@@ -420,6 +433,34 @@ export function ProductForm({
                   aria-label="ລາຄາສະເພາະຕົວເລືອກ"
                 />
               </div>
+              <div className="mt-2 flex items-center gap-2">
+                <input
+                  className="input font-mono tracking-wider"
+                  value={v.barcode}
+                  // A barcode gun types into the focused field; fix Lao-layout keys as it arrives.
+                  onChange={(e) => updateVariant(v.key, { barcode: normalizeBarcode(e.target.value) })}
+                  onKeyDown={(e) => e.key === 'Enter' && e.preventDefault()}
+                  placeholder="ບາໂຄ້ດ: ກົດແລ້ວສະແກນ ຫຼື ພິມ"
+                  aria-label="ບາໂຄ້ດ"
+                  maxLength={64}
+                />
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-sm shrink-0"
+                  onClick={() => setScanningKey(v.key)}
+                  aria-label="ສະແກນດ້ວຍກ້ອງ"
+                >
+                  <CameraIcon size={16} />
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-sm shrink-0"
+                  onClick={() => updateVariant(v.key, { barcode: generateShopBarcode() })}
+                  title="ສຳລັບສິນຄ້າທີ່ບໍ່ມີບາໂຄ້ດຈາກໂຮງງານ"
+                >
+                  ສ້າງລະຫັດ
+                </button>
+              </div>
               <div className="mt-2 flex flex-wrap items-center gap-3 text-sm">
                 {v.id ? (
                   <span className="text-muted">ສະຕັອກ: ປັບຢູ່ລຸ່ມ ↓</span>
@@ -520,6 +561,16 @@ export function ProductForm({
           </button>
         )}
       </div>
+      {scanningKey && (
+        <CameraScanner
+          title="ສະແກນບາໂຄ້ດສິນຄ້າ"
+          onScan={(code) => {
+            updateVariant(scanningKey, { barcode: code })
+            setScanningKey(null)
+          }}
+          onClose={() => setScanningKey(null)}
+        />
+      )}
     </div>
   )
 }

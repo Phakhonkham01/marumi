@@ -2,11 +2,11 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { ProductForm } from '@/components/admin/product-form'
 import { StockPanel } from '@/components/admin/stock-panel'
-import { ArrowLeftIcon } from '@/components/icons'
+import { ArrowLeftIcon, PrinterIcon } from '@/components/icons'
 import { formatDateTime } from '@/lib/dates'
 import { getCategories, getDeviceModels } from '@/lib/queries'
 import { createClient, getStaffSession } from '@/lib/supabase/server'
-import { PRODUCT_SELECT, type ProductWithRelations } from '@/lib/types'
+import { ADMIN_PRODUCT_SELECT, type ProductWithRelations } from '@/lib/types'
 
 const REASON_LABEL: Record<string, string> = {
   restock: 'ຮັບເຂົ້າ',
@@ -27,7 +27,7 @@ export default async function EditProductPage(props: PageProps<'/admin/products/
 
   // One parallel round trip: costs and movements are filtered through their variant's product.
   const [{ data }, categories, models, { data: costRows }, { data: movements }] = await Promise.all([
-    supabase.from('products').select(PRODUCT_SELECT).eq('id', productId).maybeSingle(),
+    supabase.from('products').select(ADMIN_PRODUCT_SELECT).eq('id', productId).maybeSingle(),
     getCategories(),
     getDeviceModels(),
     isOwner
@@ -59,6 +59,14 @@ export default async function EditProductPage(props: PageProps<'/admin/products/
       </Link>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="page-bar flex-1">{product.name}</h1>
+        {variants.some((v) => v.barcode) && (
+          <Link
+            href={`/admin/labels?items=${variants.filter((v) => v.barcode).map((v) => `${v.id}:1`).join(',')}`}
+            className="btn btn-butter btn-sm"
+          >
+            <PrinterIcon size={16} /> ພິມສະຕິກເກີ
+          </Link>
+        )}
         <Link href={`/p/${product.slug}`} target="_blank" className="text-sm text-navy-soft underline">
           ເບິ່ງໃນໜ້າຮ້ານ
         </Link>

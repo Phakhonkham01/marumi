@@ -10,6 +10,7 @@ function adminMenu(role: 'owner' | 'staff', pending: number): MenuSection[] {
     [
       { label: 'ແຜງຄວບຄຸມ', href: '/admin', icon: 'grid' },
       { label: 'ຂາຍໜ້າຮ້ານ', href: '/admin/pos', icon: 'cash' },
+      { label: 'ຮັບສິນຄ້າເຂົ້າ', href: '/admin/receive', icon: 'box' },
       { label: 'ອໍເດີ', href: '/admin/orders', icon: 'receipt', badge: pending },
     ],
     [
@@ -20,6 +21,7 @@ function adminMenu(role: 'owner' | 'staff', pending: number): MenuSection[] {
         children: [
           { label: 'ລາຍການສິນຄ້າ', href: '/admin/products' },
           { label: 'ເພີ່ມສິນຄ້າໃໝ່', href: '/admin/products/new' },
+          { label: 'ພິມສະຕິກເກີບາໂຄ້ດ', href: '/admin/labels' },
           { label: 'ໝວດ & ລຸ້ນໂທລະສັບ', href: '/admin/settings' },
         ],
       },

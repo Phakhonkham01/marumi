@@ -3,10 +3,13 @@
 import { refreshCatalog } from '@/app/admin/actions'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useDialog } from '@/components/dialog'
-import { BagIcon, CashIcon, MinusIcon, PlusIcon, TrashIcon } from '@/components/icons'
+import { CameraScanner } from '@/components/camera-scanner'
+import { BagIcon, CameraIcon, CashIcon, MinusIcon, PlusIcon, TrashIcon } from '@/components/icons'
 import { TileBody } from '@/components/shop/product-card'
+import { normalizeBarcode } from '@/lib/barcode'
+import { beep, useBarcodeScanner } from '@/lib/use-barcode-scanner'
 import { activeVariants, errorMessage, formatKip, sortedImages, variantPrice } from '@/lib/format'
 import { createClient } from '@/lib/supabase/client'
 import type { ProductWithRelations, Variant } from '@/lib/types'
@@ -18,6 +21,7 @@ export function PosTerminal({ products }: { products: ProductWithRelations[] }) 
   const dialog = useDialog()
   const [search, setSearch] = useState('')
   const [category, setCategory] = useState('')
+  const [camera, setCamera] = useState(false)
   const [picking, setPicking] = useState<ProductWithRelations | null>(null)
   const [lines, setLines] = useState<Line[]>([])
   const [discount, setDiscount] = useState('')
@@ -51,6 +55,45 @@ export function PosTerminal({ products }: { products: ProductWithRelations[] }) 
       return [...prev, { variant, productName: product.name, qty: 1, price: variantPrice(product, variant) }]
     })
   }
+
+  // Every variant with a barcode, for instant lookups without a network round trip.
+  const byBarcode = useMemo(() => {
+    const map = new Map<string, { product: ProductWithRelations; variant: Variant }>()
+    for (const product of products)
+      for (const variant of product.product_variants) if (variant.barcode) map.set(variant.barcode, { product, variant })
+    return map
+  }, [products])
+
+  async function handleScan(code: string) {
+    const hit = byBarcode.get(code)
+    if (!hit) {
+      beep(false)
+      const add = await dialog.confirm({
+        title: 'ບໍ່ພົບສິນຄ້າລະຫັດນີ້',
+        message: `${code} — ເພີ່ມເປັນສິນຄ້າໃໝ່ບໍ?`,
+        okLabel: 'ເພີ່ມສິນຄ້າໃໝ່',
+        cancelLabel: 'ປິດ',
+      })
+      if (add) router.push(`/admin/products/new?barcode=${encodeURIComponent(code)}`)
+      return
+    }
+    const { product, variant } = hit
+    const inBill = lines.find((l) => l.variant.id === variant.id)?.qty ?? 0
+    if (!variant.is_active || !product.is_active || variant.stock <= inBill) {
+      beep(false)
+      dialog.alert({
+        tone: 'warning',
+        title: variant.stock === 0 ? 'ສິນຄ້າໝົດສະຕັອກ' : !variant.is_active || !product.is_active ? 'ສິນຄ້ານີ້ປິດຂາຍຢູ່' : 'ສະຕັອກບໍ່ພໍ',
+        message: `${product.name}${variant.name !== 'ມາດຕະຖານ' ? ` · ${variant.name}` : ''} (ເຫຼືອ ${variant.stock})`,
+      })
+      return
+    }
+    beep(true)
+    addVariant(product, variant)
+  }
+
+  // Barcode gun anywhere on the page (paused while the variant picker is open).
+  useBarcodeScanner(handleScan, !picking && !camera)
 
   function onPickProduct(product: ProductWithRelations) {
     const variants = activeVariants(product)
@@ -100,13 +143,34 @@ export function PosTerminal({ products }: { products: ProductWithRelations[] }) 
         <div className="panel-head">
           <span className="panel-title">
             <CashIcon size={22} /> ໜ້າຂາຍ
+            <span className="ml-1 flex items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-0.5 text-xs font-semibold">
+              <span className="h-2 w-2 animate-pulse rounded-full bg-[#7ee2b8]" /> ພ້ອມສະແກນ
+            </span>
           </span>
           <div className="panel-search w-full sm:w-72">
-            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="ຄົ້ນຫາສິນຄ້າ..." aria-label="ຄົ້ນຫາສິນຄ້າ" />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              onKeyDown={(e) => {
+                // Scanning while the search box has focus: add the item instead of filtering.
+                if (e.key !== 'Enter') return
+                const code = normalizeBarcode(search)
+                if (byBarcode.has(code)) {
+                  e.preventDefault()
+                  setSearch('')
+                  handleScan(code)
+                }
+              }}
+              placeholder="ຄົ້ນຫາ ຫຼື ສະແກນບາໂຄ້ດ..."
+              aria-label="ຄົ້ນຫາສິນຄ້າ"
+            />
             <button type="button" onClick={() => setSearch('')}>
               {search ? 'ລ້າງ' : 'ຄົ້ນຫາ'}
             </button>
           </div>
+          <button type="button" className="panel-btn" onClick={() => setCamera(true)}>
+            <CameraIcon size={18} /> ກ້ອງ
+          </button>
           <select value={category} onChange={(e) => setCategory(e.target.value)} aria-label="ໝວດສິນຄ້າ">
             <option value="">ທຸກໝວດ</option>
             {categories.map((c) => (
@@ -236,6 +300,8 @@ export function PosTerminal({ products }: { products: ProductWithRelations[] }) 
           </button>
         </div>
       </section>
+
+      {camera && <CameraScanner continuous title="ສະແກນຂາຍ" onScan={handleScan} onClose={() => setCamera(false)} />}
 
       {picking && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/40 p-4 sm:items-center" onClick={() => setPicking(null)}>

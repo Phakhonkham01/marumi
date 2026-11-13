@@ -15,6 +15,8 @@ export type Variant = {
   stock: number
   sort: number
   is_active: boolean
+  /** Only loaded by admin queries (ADMIN_PRODUCT_SELECT). */
+  barcode?: string | null
 }
 
 export type Product = {
@@ -73,3 +75,6 @@ export type OrderItem = {
 /** Columns selected for product cards and detail pages. */
 export const PRODUCT_SELECT =
   '*, categories(name, slug), product_images(id, product_id, path, sort), product_variants(id, product_id, name, device_model_id, price_lak, stock, sort, is_active)'
+
+/** Admin pages also need each variant's barcode. */
+export const ADMIN_PRODUCT_SELECT = PRODUCT_SELECT.replace('is_active)', 'is_active, barcode)')
