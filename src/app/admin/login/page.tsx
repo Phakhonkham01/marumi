@@ -4,7 +4,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { useState } from 'react'
 import { useDialog } from '@/components/dialog'
-import { ArrowLeftIcon } from '@/components/icons'
+import { ArrowLeftIcon, EyeIcon, EyeOffIcon } from '@/components/icons'
 import { createClient } from '@/lib/supabase/client'
 
 const LOGIN_ERRORS: Record<string, string> = {
@@ -16,6 +16,7 @@ const LOGIN_ERRORS: Record<string, string> = {
 export default function LoginPage() {
   const dialog = useDialog()
   const [pending, setPending] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -48,7 +49,25 @@ export default function LoginPage() {
         </div>
         <div>
           <label className="label" htmlFor="password">ລະຫັດຜ່ານ</label>
-          <input id="password" name="password" type="password" className="input" required autoComplete="current-password" />
+          <div className="relative">
+            <input
+              id="password"
+              name="password"
+              type={showPassword ? 'text' : 'password'}
+              className="input w-full pr-12"
+              required
+              autoComplete="current-password"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((v) => !v)}
+              className="absolute inset-y-0 right-0 flex w-12 items-center justify-center text-muted hover:text-navy"
+              aria-label={showPassword ? 'ເຊື່ອງລະຫັດຜ່ານ' : 'ສະແດງລະຫັດຜ່ານ'}
+              aria-pressed={showPassword}
+            >
+              {showPassword ? <EyeOffIcon size={20} /> : <EyeIcon size={20} />}
+            </button>
+          </div>
         </div>
         <button className="btn btn-primary w-full" disabled={pending}>
           {pending ? 'ກຳລັງເຂົ້າລະບົບ...' : 'ເຂົ້າລະບົບ'}

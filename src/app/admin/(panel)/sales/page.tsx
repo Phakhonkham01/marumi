@@ -1,11 +1,13 @@
 import Link from 'next/link'
-import { ChartIcon } from '@/components/icons'
+import { connection } from 'next/server'
+import { ChartIcon, SearchIcon } from '@/components/icons'
 import { addDays, localDate, startOfLocalDay } from '@/lib/dates'
 import { formatKip } from '@/lib/format'
 import { createClient } from '@/lib/supabase/server'
 import { SalesTable, type SaleRow } from './sales-table'
 
 const LIMIT = 5000
+const SEARCH_LIMIT = 200
 const DAY = /^\d{4}-\d{2}-\d{2}$/
 
 /** Quick ranges, worked out from today's date in Vientiane. */
@@ -37,6 +39,7 @@ const longDate = (day: string) =>
 
 export default async function SalesPage(props: PageProps<'/admin/sales'>) {
   const sp = await props.searchParams
+  await connection() // "today" must be worked out per request
   const one = (v: string | string[] | undefined) => (typeof v === 'string' ? v : '')
   const today = localDate()
   const ranges = presets(today)
@@ -53,16 +56,26 @@ export default async function SalesPage(props: PageProps<'/admin/sales'>) {
     ;[from, to] = [to, from]
   }
   const channel = CHANNELS.some((c) => c.key === one(sp.channel)) ? one(sp.channel) : ''
+  // Bill search looks through every date. Characters that break the filter syntax are dropped.
+  const search = one(sp.q).replace(/[,()%*\\]/g, ' ').trim().slice(0, 50)
+  if (search) active = ''
 
   const supabase = await createClient()
   let query = supabase
     .from('orders')
     .select('id, code, channel, customer_name, payment_method, transfer_lak, discount_lak, total_lak, confirmed_at, order_items(qty)')
     .in('status', ['confirmed', 'completed'])
-    .gte('confirmed_at', startOfLocalDay(from))
-    .lt('confirmed_at', startOfLocalDay(addDays(to, 1)))
     .order('confirmed_at', { ascending: false })
-    .limit(LIMIT)
+  if (search) {
+    query = query
+      .or(`code.ilike.*${search}*,customer_name.ilike.*${search}*,customer_phone.ilike.*${search}*`)
+      .limit(SEARCH_LIMIT)
+  } else {
+    query = query
+      .gte('confirmed_at', startOfLocalDay(from))
+      .lt('confirmed_at', startOfLocalDay(addDays(to, 1)))
+      .limit(LIMIT)
+  }
   if (channel) query = query.eq('channel', channel)
   const { data, error } = await query
 
@@ -94,7 +107,7 @@ export default async function SalesPage(props: PageProps<'/admin/sales'>) {
     const q = new URLSearchParams({ ...params, ...(channel ? { channel } : {}) })
     return `/admin/sales?${q}`
   }
-  const rangeParams: Record<string, string> = active ? { range: active } : { from, to }
+  const rangeParams: Record<string, string> = search ? { q: search } : active ? { range: active } : { from, to }
 
   return (
     <div className="space-y-4">
@@ -104,10 +117,33 @@ export default async function SalesPage(props: PageProps<'/admin/sales'>) {
             <ChartIcon size={22} /> ຍອດຂາຍ
           </span>
           <span className="text-sm font-semibold">
-            {from === to ? longDate(from) : `${longDate(from)} – ${longDate(to)}`}
+            {search ? `ຄົ້ນຫາ: "${search}" (ທຸກວັນທີ)` : from === to ? longDate(from) : `${longDate(from)} – ${longDate(to)}`}
           </span>
         </div>
         <div className="space-y-3 p-4">
+          {/* Bill search: bill number, customer name or phone, across all dates. */}
+          <form action="/admin/sales" className="flex gap-2">
+            <div className="relative flex-1">
+              <SearchIcon size={18} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
+              <input
+                type="search"
+                name="q"
+                defaultValue={search}
+                placeholder="ຄົ້ນຫາເລກບິນ, ຊື່ ຫຼື ເບີໂທລູກຄ້າ"
+                className="input w-full pl-10"
+                autoComplete="off"
+                enterKeyHint="search"
+              />
+            </div>
+            {channel && <input type="hidden" name="channel" value={channel} />}
+            <button className="btn btn-primary">ຄົ້ນຫາ</button>
+            {search && (
+              <Link href={href({ range: 'today' })} className="btn btn-ghost">
+                ລ້າງ
+              </Link>
+            )}
+          </form>
+
           <div className="flex flex-wrap gap-2">
             {ranges.map((r) => (
               <Link
@@ -161,10 +197,13 @@ export default async function SalesPage(props: PageProps<'/admin/sales'>) {
       </div>
 
       {error && <p className="text-danger print:hidden">ໂຫຼດຂໍ້ມູນບໍ່ສຳເລັດ: {error.message}</p>}
-      {rows.length === LIMIT && (
+      {search && rows.length === SEARCH_LIMIT && (
+        <p className="text-sm text-danger print:hidden">ພົບຫຼາຍເກີນ {SEARCH_LIMIT} ບິນ — ພິມໃຫ້ລະອຽດຂຶ້ນ</p>
+      )}
+      {!search && rows.length === LIMIT && (
         <p className="text-sm text-danger print:hidden">ສະແດງພຽງ {LIMIT} ບິນຫຼ້າສຸດ — ເລືອກຊ່ວງວັນທີໃຫ້ສັ້ນລົງເພື່ອເບິ່ງຄົບ</p>
       )}
-      <SalesTable rows={rows} multiDay={from !== to} />
+      <SalesTable rows={rows} multiDay={!!search || from !== to} />
     </div>
   )
 }

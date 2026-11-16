@@ -41,7 +41,7 @@ export function SalesTable({ rows, multiDay }: { rows: SaleRow[]; multiDay: bool
           </span>
         </div>
         {rows.length === 0 ? (
-          <p className="py-12 text-center text-muted">ບໍ່ມີການຂາຍໃນຊ່ວງນີ້</p>
+          <p className="py-12 text-center text-muted">ບໍ່ພົບໃບບິນ</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="data-table">
