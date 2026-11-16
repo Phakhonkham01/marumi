@@ -4,7 +4,7 @@ import { refreshCatalog } from '@/app/admin/actions'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
-import { CameraScanner } from '@/components/camera-scanner'
+import { CameraScanner, usePreloadScanner } from '@/components/camera-scanner'
 import { useDialog } from '@/components/dialog'
 import { BoxIcon, CameraIcon, MinusIcon, PlusIcon, PrinterIcon, SearchIcon, TrashIcon } from '@/components/icons'
 import { looksLikeBarcode, normalizeBarcode } from '@/lib/barcode'
@@ -113,6 +113,7 @@ export function ReceiveTerminal({
   }
 
   useBarcodeScanner(handleScan, !linking && !saving && !camera)
+  usePreloadScanner()
 
   async function linkBarcode(item: Item, code: string) {
     const { error } = await createClient().from('product_variants').update({ barcode: code }).eq('id', item.variant.id)

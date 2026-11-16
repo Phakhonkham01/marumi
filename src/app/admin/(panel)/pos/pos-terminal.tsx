@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useDialog } from '@/components/dialog'
-import { CameraScanner } from '@/components/camera-scanner'
+import { CameraScanner, usePreloadScanner } from '@/components/camera-scanner'
 import { BagIcon, CameraIcon, CashIcon, MinusIcon, PlusIcon, TrashIcon } from '@/components/icons'
 import { TileBody } from '@/components/shop/product-card'
 import { normalizeBarcode } from '@/lib/barcode'
@@ -94,6 +94,7 @@ export function PosTerminal({ products }: { products: ProductWithRelations[] }) 
 
   // Barcode gun anywhere on the page (paused while the variant picker is open).
   useBarcodeScanner(handleScan, !picking && !camera)
+  usePreloadScanner()
 
   function onPickProduct(product: ProductWithRelations) {
     const variants = activeVariants(product)
