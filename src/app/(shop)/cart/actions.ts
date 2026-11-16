@@ -3,7 +3,7 @@
 import { errorMessage } from '@/lib/format'
 import { createPublicClient } from '@/lib/supabase/server'
 
-export type CheckoutState = { error?: string; code?: string; values?: Record<string, string> }
+export type CheckoutState = { error?: string; code?: string; phone?: string; values?: Record<string, string> }
 
 export async function placeOrder(_prev: CheckoutState, formData: FormData): Promise<CheckoutState> {
   let items: { variant_id: number; qty: number }[]
@@ -28,5 +28,5 @@ export async function placeOrder(_prev: CheckoutState, formData: FormData): Prom
     p_items: items.map((i) => ({ variant_id: Number(i.variant_id), qty: Number(i.qty) })),
   })
   if (error) return { error: errorMessage(error.message), values: customer }
-  return { code: data as string }
+  return { code: data as string, phone: customer.phone }
 }

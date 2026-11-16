@@ -60,7 +60,7 @@ async function ProductList({ searchParams }: { searchParams: PageProps<'/product
 
       <DevicePicker models={models} value={device?.id} baseQuery={baseQuery} />
 
-      <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4">
+      <div className="no-scrollbar -mx-3 flex gap-2 overflow-x-auto px-3 sm:-mx-5 sm:px-5">
         <Link href={link({ category: null })} className="chip" data-active={!category}>
           ທັງໝົດ
         </Link>

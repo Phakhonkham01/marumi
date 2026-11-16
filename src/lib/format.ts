@@ -8,8 +8,6 @@ export const SHOP = {
   whatsapp: '8562099505727',
   facebook: 'https://www.facebook.com/profile.php?id=100087092628169',
   tagline: 'ອຸປະກອນເສີມໂທລະສັບ ຫູຟັງ ສາຍສາກ ພາວເວີແບັງ',
-  // Shown at checkout when the customer pays by transfer. Leave account empty to hide.
-  bank: { name: 'BCEL One', account: '', holder: '' },
 }
 
 export function formatKip(value: number) {

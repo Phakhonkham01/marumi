@@ -6,10 +6,13 @@ import { useRouter } from 'next/navigation'
 import { useActionState, useEffect, useRef, useState } from 'react'
 import { useDialog } from '@/components/dialog'
 import { MinusIcon, PlusIcon, TrashIcon } from '@/components/icons'
+import { BankBox } from '@/components/shop/bank-box'
 import { useCart, type CartItem } from '@/components/shop/cart'
 import { EmptyState } from '@/components/shop/product-card'
 import { SlipUpload } from '@/components/shop/slip-upload'
-import { formatKip, imageUrl, SHOP } from '@/lib/format'
+import { formatKip, imageUrl } from '@/lib/format'
+import { saveOrder } from '@/lib/my-orders'
+import type { ShopSettings } from '@/lib/queries'
 import { createClient } from '@/lib/supabase/client'
 import { placeOrder, type CheckoutState } from './actions'
 
@@ -61,7 +64,7 @@ function useRefreshCart() {
   return notice
 }
 
-export function CartView() {
+export function CartView({ shop }: { shop: ShopSettings | null }) {
   const { items, ready, subtotal, setQty, remove, clear } = useCart()
   const notice = useRefreshCart()
   const router = useRouter()
@@ -70,9 +73,26 @@ export function CartView() {
   const [payment, setPayment] = useState('transfer')
   const [uploading, setUploading] = useState(false)
   const [state, action, pending] = useActionState<CheckoutState, FormData>(placeOrder, {})
+  const formRef = useRef<HTMLFormElement>(null)
+  const [formVisible, setFormVisible] = useState(false)
+
+  // The phone bottom bar hides once the order form is on screen.
+  useEffect(() => {
+    const form = formRef.current
+    if (!form) return
+    const io = new IntersectionObserver(([entry]) => setFormVisible(entry.isIntersecting), { threshold: 0.15 })
+    io.observe(form)
+    return () => io.disconnect()
+  }, [ready, items.length])
+
+  function goToForm() {
+    formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    setTimeout(() => formRef.current?.querySelector<HTMLInputElement>('#name')?.focus({ preventScroll: true }), 400)
+  }
 
   useEffect(() => {
     if (state.code) {
+      saveOrder(state.code, state.phone ?? '')
       clear()
       router.push(`/order/${state.code}`)
       dialog.alert({ tone: 'success', title: 'ສັ່ງຊື້ສຳເລັດ', message: `ເລກອໍເດີ ${state.code} · ຮ້ານຈະຕິດຕໍ່ກັບໄປໄວໆນີ້` })
@@ -94,7 +114,7 @@ export function CartView() {
   }
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
+    <div className="grid gap-6 pb-20 lg:grid-cols-[1fr_380px] lg:pb-0">
       <section className="space-y-3">
         <h1 className="page-bar">ກະຕ່າສິນຄ້າ</h1>
         {notice && <p className="rounded-2xl bg-butter/60 px-4 py-3 text-sm">{notice}</p>}
@@ -109,16 +129,16 @@ export function CartView() {
               <p className="text-sm font-bold text-navy">{formatKip(item.price)}</p>
               <div className="mt-auto flex items-center justify-between pt-1">
                 <div className="flex items-center rounded-full border-[1.5px] border-line">
-                  <button className="p-2" onClick={() => setQty(item.variantId, item.qty - 1)} aria-label="ຫຼຸດ">
-                    <MinusIcon size={14} />
+                  <button className="flex h-11 w-11 items-center justify-center" onClick={() => setQty(item.variantId, item.qty - 1)} aria-label="ຫຼຸດ">
+                    <MinusIcon size={16} />
                   </button>
-                  <span className="w-7 text-center text-sm font-semibold">{item.qty}</span>
-                  <button className="p-2" onClick={() => setQty(item.variantId, item.qty + 1)} aria-label="ເພີ່ມ">
-                    <PlusIcon size={14} />
+                  <span className="w-8 text-center font-semibold">{item.qty}</span>
+                  <button className="flex h-11 w-11 items-center justify-center" onClick={() => setQty(item.variantId, item.qty + 1)} aria-label="ເພີ່ມ">
+                    <PlusIcon size={16} />
                   </button>
                 </div>
-                <button className="p-2 text-danger" onClick={() => remove(item.variantId)} aria-label="ລຶບ">
-                  <TrashIcon size={18} />
+                <button className="flex h-11 w-11 items-center justify-center rounded-full text-danger hover:bg-danger/10" onClick={() => remove(item.variantId)} aria-label="ລຶບ">
+                  <TrashIcon size={20} />
                 </button>
               </div>
             </div>
@@ -126,7 +146,7 @@ export function CartView() {
         ))}
       </section>
 
-      <form action={action} className="card h-fit space-y-4 p-5 lg:sticky lg:top-24">
+      <form ref={formRef} action={action} className="card h-fit scroll-mt-20 space-y-4 p-5 lg:sticky lg:top-24">
         <h2 className="text-lg font-bold text-navy">ຂໍ້ມູນຜູ້ສັ່ງ</h2>
         <input
           type="hidden"
@@ -184,13 +204,7 @@ export function CartView() {
             <option value="cash">ຈ່າຍເງິນສົດທີ່ຮ້ານ</option>
           </select>
         </div>
-        {payment === 'transfer' && SHOP.bank.account && (
-          <div className="rounded-2xl bg-mist/70 p-3 text-sm">
-            <p className="font-semibold text-navy">ໂອນເຂົ້າບັນຊີ {SHOP.bank.name}</p>
-            <p className="font-display text-base font-bold">{SHOP.bank.account}</p>
-            <p className="text-muted">{SHOP.bank.holder}</p>
-          </div>
-        )}
+        {payment === 'transfer' && <BankBox settings={shop} />}
         {delivery === 'delivery' && payment === 'transfer' && <SlipUpload onBusyChange={setUploading} />}
         <div>
           <label className="label" htmlFor="note">ໝາຍເຫດ</label>
@@ -206,6 +220,19 @@ export function CartView() {
         </button>
         <p className="text-center text-xs text-muted">ຮ້ານຈະໂທ ຫຼື ທັກຫາເພື່ອຢືນຢັນອໍເດີ</p>
       </form>
+
+      {/* Phones: total and a shortcut to the order form, until the form is in view. */}
+      {!formVisible && (
+        <div className="fixed inset-x-0 bottom-0 z-30 flex items-center gap-3 border-t border-line bg-white px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-4px_16px_rgba(29,43,72,0.08)] lg:hidden">
+          <div className="min-w-0 flex-1">
+            <p className="text-xs text-muted">ລວມ {items.reduce((n, i) => n + i.qty, 0)} ຊິ້ນ</p>
+            <p className="text-lg font-bold text-navy">{formatKip(subtotal)}</p>
+          </div>
+          <button type="button" className="btn btn-primary" onClick={goToForm}>
+            ສັ່ງຊື້
+          </button>
+        </div>
+      )}
     </div>
   )
 }

@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useDialog } from '@/components/dialog'
 import { ChatIcon, MinusIcon, PlusIcon } from '@/components/icons'
 import { formatKip, imageUrl, variantPrice, whatsappLink } from '@/lib/format'
@@ -65,6 +65,17 @@ export function BuyBox({
   const inCart = items.find((i) => i.variantId === variantId)?.qty ?? 0
   const available = Math.max(0, (variant?.stock ?? 0) - inCart)
   const showPicker = variants.length > 1
+  const addRow = useRef<HTMLDivElement>(null)
+  const [addRowVisible, setAddRowVisible] = useState(true)
+
+  // Phones: when the add-to-cart row scrolls off screen, a bar at the bottom takes over.
+  useEffect(() => {
+    const row = addRow.current
+    if (!row) return
+    const io = new IntersectionObserver(([entry]) => setAddRowVisible(entry.isIntersecting))
+    io.observe(row)
+    return () => io.disconnect()
+  }, [])
 
   async function onAdd() {
     if (!variant || available < 1) return
@@ -90,7 +101,7 @@ export function BuyBox({
       okLabel: 'ໄປທີ່ກະຕ່າ',
       cancelLabel: 'ເລືອກຊື້ຕໍ່',
     })
-    if (goToCart) router.push('/cart')
+    router.push(goToCart ? '/cart' : '/products')
   }
 
   const askText = `ສະບາຍດີ ສົນໃຈ ${product.name}${showPicker && variant ? ` (${variant.name})` : ''}\n${pageUrl}`
@@ -133,7 +144,7 @@ export function BuyBox({
         {variant && variant.stock > 0 ? `ມີສິນຄ້າ ${variant.stock} ຊິ້ນ` : 'ສິນຄ້າໝົດຊົ່ວຄາວ'}
       </p>
 
-      <div className="flex items-center gap-3">
+      <div ref={addRow} className="flex items-center gap-3">
         <div className="flex items-center rounded-full border-[1.5px] border-line bg-white">
           <button className="p-3" onClick={() => setQty((n) => Math.max(1, n - 1))} aria-label="ຫຼຸດຈຳນວນ">
             <MinusIcon size={16} />
@@ -155,6 +166,21 @@ export function BuyBox({
       <a href={whatsappLink(askText)} target="_blank" rel="noreferrer" className="btn btn-ghost w-full">
         <ChatIcon size={18} /> ສອບຖາມທາງ WhatsApp
       </a>
+
+      {!addRowVisible && (
+        <div className="fixed inset-x-0 bottom-0 z-30 flex items-center gap-3 border-t border-line bg-white px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-4px_16px_rgba(29,43,72,0.08)] md:hidden">
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-xs text-muted">
+              {product.name}
+              {showPicker && variant ? ` · ${variant.name}` : ''}
+            </p>
+            <p className="text-lg font-bold text-navy">{formatKip(price)}</p>
+          </div>
+          <button className="btn btn-primary" disabled={available < 1} onClick={onAdd}>
+            {available < 1 ? (inCart > 0 ? 'ຢູ່ໃນກະຕ່າແລ້ວ' : 'ສິນຄ້າໝົດ') : 'ໃສ່ກະຕ່າ'}
+          </button>
+        </div>
+      )}
     </div>
   )
 }

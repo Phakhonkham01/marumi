@@ -36,6 +36,7 @@ function adminMenu(user: { role: Role; permissions: Permission[] }, pending: num
       },
       { label: 'ລາຍງານ', href: '/admin/reports', icon: 'chart', need: 'reports' },
       { label: 'ພະນັກງານ', href: '/admin/staff', icon: 'users', need: 'staff' },
+      { label: 'ຕັ້ງຄ່າຮ້ານ', href: '/admin/shop', icon: 'gear', need: 'settings' },
       { label: 'ໂປຣໄຟລ໌ຂອງຂ້ອຍ', href: '/admin/profile', icon: 'user' },
     ],
     [{ label: 'ເບິ່ງໜ້າຮ້ານ', href: '/', icon: 'store', external: true }],

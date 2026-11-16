@@ -10,6 +10,7 @@ export const PERMISSIONS = [
   { key: 'labels', label: 'ພິມສະຕິກເກີບາໂຄ້ດ', hint: '' },
   { key: 'reports', label: 'ລາຍງານ, ຕົ້ນທຶນ ແລະ ກຳໄລ', hint: 'ເຫັນລາຄາທຶນ ແລະ ກຳໄລທຸກບ່ອນ' },
   { key: 'staff', label: 'ຈັດການພະນັກງານ', hint: 'ເພີ່ມ/ແກ້ໄຂ/ປິດບັນຊີພະນັກງານ' },
+  { key: 'settings', label: 'ຕັ້ງຄ່າຮ້ານ', hint: 'ບັນຊີທະນາຄານ ແລະ QR ສຳລັບລູກຄ້າໂອນ' },
 ] as const
 
 export type Permission = (typeof PERMISSIONS)[number]['key']

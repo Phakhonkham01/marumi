@@ -67,3 +67,17 @@ export async function getProduct(slug: string): Promise<ProductWithRelations | n
     .maybeSingle()
   return (data as unknown as ProductWithRelations) ?? null
 }
+
+export type ShopSettings = { bank_name: string; bank_account: string; bank_holder: string; bank_qr_url: string | null }
+
+/** Bank details shown at checkout (edited in /admin/shop). */
+export async function getShopSettings(): Promise<ShopSettings | null> {
+  'use cache'
+  catalogCache()
+  const { data } = await createCatalogClient()
+    .from('shop_settings')
+    .select('bank_name, bank_account, bank_holder, bank_qr_url')
+    .eq('id', 1)
+    .maybeSingle()
+  return data
+}

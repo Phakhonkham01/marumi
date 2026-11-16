@@ -77,6 +77,8 @@ async function ProductDetail({ params }: { params: PageProps<'/p/[slug]'>['param
           )}
         </section>
       )}
+      {/* Room for the phone add-to-cart bar. */}
+      <div className="h-16 md:hidden" aria-hidden />
     </div>
   )
 }

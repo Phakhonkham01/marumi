@@ -23,6 +23,9 @@ export default function HomePage() {
             <Link href="/products" className="btn btn-primary">
               ເບິ່ງສິນຄ້າທັງໝົດ
             </Link>
+            <Link href="/track" className="btn btn-ghost bg-white">
+              📦 ຕິດຕາມອໍເດີ
+            </Link>
           </div>
         </div>
         <Image
@@ -52,7 +55,7 @@ async function Browse() {
     <section className="space-y-3">
       <h2 className="text-lg font-bold text-navy">ຊອກເຄສໃຫ້ກົງລຸ້ນ</h2>
       <DevicePicker models={models} />
-      <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 pt-1">
+      <div className="no-scrollbar -mx-3 flex gap-2 overflow-x-auto px-3 sm:-mx-5 sm:px-5 pt-1">
         {categories.map((c) => (
           <Link key={c.id} href={`/products?category=${c.slug}`} className="chip hover:border-sky">
             {c.name}

@@ -58,7 +58,7 @@ export function SalesChart({ days }: { days: SalesDay[] }) {
           <span className="translate-y-1/2">0</span>
         </div>
 
-        <div className="relative flex-1">
+        <div className="relative min-w-0 flex-1">
           <div className="pointer-events-none absolute inset-x-0 top-0 bottom-6 flex flex-col justify-between">
             {[...ticks, 0].map((t) => (
               <div key={t} className={`border-t ${t === 0 ? 'border-sky' : 'border-dashed border-line'}`} />
@@ -73,7 +73,9 @@ export function SalesChart({ days }: { days: SalesDay[] }) {
                 <button
                   key={d.day}
                   type="button"
-                  className="group flex h-full flex-1 flex-col items-center outline-none"
+                  // min-w-0: date labels may spill over their column instead of widening it,
+                  // so 14 days always fit a phone screen.
+                  className="group flex h-full min-w-0 flex-1 flex-col items-center outline-none"
                   onMouseEnter={() => setActive(i)}
                   onFocus={() => setActive(i)}
                   onBlur={() => setActive(null)}
@@ -100,8 +102,9 @@ export function SalesChart({ days }: { days: SalesDay[] }) {
                     </div>
                   </div>
                   <span
-                    className={`flex h-6 items-end text-[10px] ${isToday ? 'font-bold text-navy' : 'text-muted'} ${
-                      i % 2 === (days.length - 1) % 2 ? '' : 'max-sm:invisible'
+                    className={`flex h-6 items-end whitespace-nowrap text-[10px] ${isToday ? 'self-end font-bold text-navy' : 'text-muted'} ${
+                      // Phones: a date every 4 days (counting back from today) so labels don't collide.
+                      (days.length - 1 - i) % 4 === 0 ? '' : 'max-sm:invisible'
                     }`}
                   >
                     {isToday ? 'ມື້ນີ້' : dayLabel(d.day)}
