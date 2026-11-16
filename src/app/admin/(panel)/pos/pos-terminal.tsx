@@ -1,6 +1,7 @@
 'use client'
 
 import { refreshCatalog } from '@/app/admin/actions'
+import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -10,11 +11,73 @@ import { BagIcon, CameraIcon, CashIcon, MinusIcon, PlusIcon, TrashIcon } from '@
 import { TileBody } from '@/components/shop/product-card'
 import { normalizeBarcode } from '@/lib/barcode'
 import { beep, useBarcodeScanner } from '@/lib/use-barcode-scanner'
-import { activeVariants, errorMessage, formatKip, sortedImages, variantPrice } from '@/lib/format'
+import { activeVariants, errorMessage, formatKip, imageUrl, sortedImages, variantPrice } from '@/lib/format'
 import { createClient } from '@/lib/supabase/client'
 import type { ProductWithRelations, Variant } from '@/lib/types'
 
-type Line = { variant: Variant; productName: string; qty: number; price: number }
+type Line = { variant: Variant; productName: string; image: string | null; qty: number; price: number }
+
+/** Gives a short bounce to show something landed in it. */
+function pulse(el: Element) {
+  el.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.25)' }, { transform: 'scale(1)' }], {
+    duration: 320,
+    easing: 'ease-out',
+  })
+}
+
+/**
+ * "Fly to cart": a copy of the product photo arcs from the tile into the cart and shrinks.
+ * The outer box moves sideways at a steady pace while the inner photo first lifts, then
+ * drops, which together draws the curve.
+ */
+function flyToCart(source: Element | null, target: Element | null) {
+  if (!target) return
+  const img = source?.querySelector('img')
+  if (!img || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return pulse(target)
+  const from = img.getBoundingClientRect()
+  const to = target.getBoundingClientRect()
+  const dx = to.left + to.width / 2 - (from.left + from.width / 2)
+  const dy = to.top + to.height / 2 - (from.top + from.height / 2)
+
+  const box = document.createElement('div')
+  Object.assign(box.style, {
+    position: 'fixed',
+    left: `${from.left}px`,
+    top: `${from.top}px`,
+    width: `${from.width}px`,
+    height: `${from.height}px`,
+    zIndex: '70',
+    pointerEvents: 'none',
+  })
+  const ghost = document.createElement('img')
+  ghost.src = img.currentSrc || img.src
+  Object.assign(ghost.style, {
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover',
+    borderRadius: '14px',
+    background: 'white',
+    boxShadow: '0 8px 24px rgb(29 43 72 / 0.35)',
+  })
+  box.append(ghost)
+  document.body.append(box)
+
+  const duration = 700
+  box.animate([{ transform: 'translateX(0)' }, { transform: `translateX(${dx}px)` }], { duration, easing: 'linear' })
+  ghost
+    .animate(
+      [
+        { transform: 'translateY(0) scale(1)', opacity: 1 },
+        { transform: `translateY(${dy}px) scale(0.12)`, opacity: 0.6 },
+      ],
+      // Overshooting control points: rises first, then falls into the cart.
+      { duration, easing: 'cubic-bezier(0.3, -0.5, 0.7, 0.9)', fill: 'forwards' },
+    )
+    .finished.then(() => {
+      box.remove()
+      pulse(target)
+    })
+}
 
 export function PosTerminal({ products }: { products: ProductWithRelations[] }) {
   const router = useRouter()
@@ -30,6 +93,10 @@ export function PosTerminal({ products }: { products: ProductWithRelations[] }) 
   const [busy, setBusy] = useState(false)
   const [done, setDone] = useState<string | null>(null)
   const linesRef = useRef<HTMLDivElement>(null)
+  const billRef = useRef<HTMLElement>(null)
+  const billIconRef = useRef<HTMLSpanElement>(null)
+  const cartBarRef = useRef<HTMLSpanElement>(null)
+  const pickedTile = useRef<HTMLElement | null>(null)
   const lineCount = lines.length
 
   // Keep the newest line in view when one is added to a long bill.
@@ -46,14 +113,24 @@ export function PosTerminal({ products }: { products: ProductWithRelations[] }) 
   const subtotal = lines.reduce((n, l) => n + l.qty * l.price, 0)
   const discountValue = Math.min(subtotal, Math.max(0, Number(discount.replace(/[,\s]/g, '')) || 0))
 
-  function addVariant(product: ProductWithRelations, variant: Variant) {
+  const itemCount = lines.reduce((n, l) => n + l.qty, 0)
+
+  /** The cart the product flies to: the bottom bar on phones, the bill header on wide screens. */
+  function cartTarget() {
+    const bar = cartBarRef.current
+    return bar && bar.getClientRects().length > 0 ? bar : billIconRef.current
+  }
+
+  function addVariant(product: ProductWithRelations, variant: Variant, source: Element | null = null) {
     setDone(null)
     setPicking(null)
     setLines((prev) => {
       const existing = prev.find((l) => l.variant.id === variant.id)
       if (existing) return prev.map((l) => (l.variant.id === variant.id ? { ...l, qty: l.qty + 1 } : l))
-      return [...prev, { variant, productName: product.name, qty: 1, price: variantPrice(product, variant) }]
+      const image = sortedImages(product)[0]?.path ?? null
+      return [...prev, { variant, productName: product.name, image, qty: 1, price: variantPrice(product, variant) }]
     })
+    flyToCart(source, cartTarget())
   }
 
   // Every variant with a barcode, for instant lookups without a network round trip.
@@ -96,10 +173,13 @@ export function PosTerminal({ products }: { products: ProductWithRelations[] }) 
   useBarcodeScanner(handleScan, !picking && !camera)
   usePreloadScanner()
 
-  function onPickProduct(product: ProductWithRelations) {
+  function onPickProduct(product: ProductWithRelations, tile: HTMLElement) {
     const variants = activeVariants(product)
-    if (variants.length === 1) addVariant(product, variants[0])
-    else setPicking(product)
+    if (variants.length === 1) addVariant(product, variants[0], tile)
+    else {
+      pickedTile.current = tile
+      setPicking(product)
+    }
   }
 
   const updateLine = (id: number, patch: Partial<Line>) =>
@@ -139,7 +219,7 @@ export function PosTerminal({ products }: { products: ProductWithRelations[] }) 
   }
 
   return (
-    <div className="grid items-start gap-4 xl:grid-cols-[1fr_380px]">
+    <div className="grid items-start gap-4 pb-20 xl:grid-cols-[1fr_380px] xl:pb-0">
       <section className="panel">
         <div className="panel-head">
           <span className="panel-title">
@@ -184,7 +264,21 @@ export function PosTerminal({ products }: { products: ProductWithRelations[] }) 
             const stock = activeVariants(p).reduce((n, v) => n + v.stock, 0)
             const prices = activeVariants(p).map((v) => variantPrice(p, v))
             return (
-              <button key={p.id} onClick={() => onPickProduct(p)} disabled={stock === 0} className="pcard disabled:opacity-40">
+              // A div, not a <button>: iOS Safari collapses the photo box inside buttons.
+              <div
+                key={p.id}
+                role="button"
+                tabIndex={stock === 0 ? -1 : 0}
+                aria-disabled={stock === 0}
+                onClick={(e) => stock > 0 && onPickProduct(p, e.currentTarget)}
+                onKeyDown={(e) => {
+                  if (stock > 0 && (e.key === 'Enter' || e.key === ' ')) {
+                    e.preventDefault()
+                    onPickProduct(p, e.currentTarget)
+                  }
+                }}
+                className={`pcard w-full cursor-pointer select-none active:scale-[0.97] ${stock === 0 ? 'pointer-events-none opacity-40' : ''}`}
+              >
                 <TileBody
                   name={p.name}
                   category={p.categories?.name}
@@ -192,7 +286,7 @@ export function PosTerminal({ products }: { products: ProductWithRelations[] }) 
                   price={formatKip(prices.length ? Math.min(...prices) : p.price_lak)}
                   stock={stock}
                 />
-              </button>
+              </div>
             )
           })}
           {visible.length === 0 && <p className="col-span-full py-10 text-center text-muted">ບໍ່ພົບສິນຄ້າ</p>}
@@ -200,10 +294,18 @@ export function PosTerminal({ products }: { products: ProductWithRelations[] }) 
       </section>
 
       {/* The bill stays in view while the product list scrolls with the page. */}
-      <section className="panel flex flex-col xl:sticky xl:top-24 xl:max-h-[calc(100dvh-7.5rem)]">
+      <section ref={billRef} className="panel flex scroll-mt-24 flex-col xl:sticky xl:top-24 xl:max-h-[calc(100dvh-7.5rem)]">
         <div className="panel-head">
           <span className="panel-title">
-            <BagIcon size={22} /> ບິນ
+            <span ref={billIconRef} className="relative inline-flex">
+              <BagIcon size={22} />
+              {itemCount > 0 && (
+                <span className="absolute -right-2 -top-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-butter px-1 text-[10px] font-bold text-navy">
+                  {itemCount}
+                </span>
+              )}
+            </span>{' '}
+            ບິນ
           </span>
           <button type="button" className="panel-btn" onClick={clearBill} disabled={lines.length === 0}>
             <TrashIcon size={16} /> ລ້າງບິນ
@@ -229,8 +331,15 @@ export function PosTerminal({ products }: { products: ProductWithRelations[] }) 
           )}
           {lines.map((l) => (
             <div key={l.variant.id} className="rounded-md bg-white p-3 text-sm shadow-sm">
-              <div className="flex justify-between gap-2">
-                <span className="font-bold text-ink">
+              <div className="flex items-start gap-3">
+                <Image
+                  src={imageUrl(l.image)}
+                  alt=""
+                  width={48}
+                  height={48}
+                  className={`h-12 w-12 shrink-0 rounded-md border border-line ${l.image ? 'object-cover' : 'object-contain p-1.5 opacity-40 grayscale'}`}
+                />
+                <span className="min-w-0 flex-1 font-bold text-ink">
                   {l.productName}
                   {l.variant.name !== 'ມາດຕະຖານ' && <span className="font-normal text-muted"> · {l.variant.name}</span>}
                 </span>
@@ -302,6 +411,25 @@ export function PosTerminal({ products }: { products: ProductWithRelations[] }) 
         </div>
       </section>
 
+      {/* Phones: the bill sits below the products, so a cart bar stays at the bottom. */}
+      <button
+        type="button"
+        onClick={() => billRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+        className="fixed inset-x-3 bottom-3 z-40 flex items-center gap-3 rounded-xl bg-navy px-4 py-3 text-white shadow-lg xl:hidden"
+      >
+        <span ref={cartBarRef} className="relative inline-flex">
+          <BagIcon size={24} />
+          {itemCount > 0 && (
+            <span className="absolute -right-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-butter px-1 text-xs font-bold text-navy">
+              {itemCount}
+            </span>
+          )}
+        </span>
+        <span className="font-semibold">{itemCount > 0 ? `${itemCount} ລາຍການ` : 'ບິນຍັງວ່າງ'}</span>
+        <span className="ml-auto font-bold text-butter">{formatKip(subtotal - discountValue)}</span>
+        <span className="text-sm text-white/80">ເບິ່ງບິນ ›</span>
+      </button>
+
       {camera && <CameraScanner continuous title="ສະແກນຂາຍ" onScan={handleScan} onClose={() => setCamera(false)} />}
 
       {picking && (
@@ -314,7 +442,7 @@ export function PosTerminal({ products }: { products: ProductWithRelations[] }) 
               <p className="text-sm text-muted">ເລືອກລຸ້ນ / ສີ</p>
               <div className="flex flex-wrap gap-2">
                 {activeVariants(picking).map((v) => (
-                  <button key={v.id} className="chip" disabled={v.stock === 0} onClick={() => addVariant(picking, v)}>
+                  <button key={v.id} className="chip" disabled={v.stock === 0} onClick={() => addVariant(picking, v, pickedTile.current)}>
                     {v.name} <span className="text-xs text-muted">({v.stock})</span>
                   </button>
                 ))}

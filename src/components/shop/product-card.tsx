@@ -23,7 +23,7 @@ export function TileBody({
 }) {
   return (
     <>
-      <div className="relative aspect-[4/3] bg-white">
+      <div className="relative aspect-[4/3] w-full shrink-0 bg-white">
         {category && <span className="pcard-tag">{category}</span>}
         {badge}
         <Image
