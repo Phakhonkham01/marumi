@@ -21,7 +21,7 @@ import {
   ReceiptIcon,
   StoreIcon,
   TagIcon,
-  UserIcon,
+  UserIcon, UsersIcon,
 } from '@/components/icons'
 
 // Icons are passed by name so server layouts can describe their menus.
@@ -39,6 +39,7 @@ const ICONS = {
   store: StoreIcon,
   tag: TagIcon,
   user: UserIcon,
+  users: UsersIcon,
 }
 
 export type MenuLink = { label: string; href: string; external?: boolean; badge?: number }

@@ -79,7 +79,7 @@ function flyToCart(source: Element | null, target: Element | null) {
     })
 }
 
-export function PosTerminal({ products }: { products: ProductWithRelations[] }) {
+export function PosTerminal({ products, canDiscount }: { products: ProductWithRelations[]; canDiscount: boolean }) {
   const router = useRouter()
   const dialog = useDialog()
   const [search, setSearch] = useState('')
@@ -395,8 +395,8 @@ export function PosTerminal({ products }: { products: ProductWithRelations[] }) 
         </div>
 
         <div className="shrink-0 space-y-3 border-t border-line p-3">
-          <div className="grid grid-cols-2 gap-2">
-            <input className="input" inputMode="numeric" value={discount} onChange={(e) => setDiscount(e.target.value)} placeholder="ສ່ວນຫຼຸດ (ກີບ)" />
+          <div className={`grid gap-2 ${canDiscount ? 'grid-cols-2' : 'grid-cols-1'}`}>
+            {canDiscount && <input className="input" inputMode="numeric" value={discount} onChange={(e) => setDiscount(e.target.value)} placeholder="ສ່ວນຫຼຸດ (ກີບ)" />}
             <input className="input" value={customer} onChange={(e) => setCustomer(e.target.value)} placeholder="ຊື່ລູກຄ້າ (ບໍ່ບັງຄັບ)" />
           </div>
           <div className="summary-box space-y-1 text-sm">

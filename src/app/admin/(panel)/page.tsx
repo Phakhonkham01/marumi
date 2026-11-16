@@ -1,8 +1,9 @@
+import { hasPermission } from '@/lib/permissions'
 import Link from 'next/link'
 import { SalesChart, type SalesDay } from '@/components/admin/sales-chart'
 import { addDays, localDate, startOfLocalDay } from '@/lib/dates'
 import { formatKip } from '@/lib/format'
-import { createClient, getStaffSession } from '@/lib/supabase/server'
+import { createClient, requirePermission } from '@/lib/supabase/server'
 
 type LowStock = { id: number; name: string; stock: number; products: { id: number; name: string } | null }
 type SaleRow = { total_lak: number; channel: 'online' | 'store'; confirmed_at: string }
@@ -10,7 +11,7 @@ type SaleRow = { total_lak: number; channel: 'online' | 'store'; confirmed_at: s
 const CHART_DAYS = 14
 
 export default async function DashboardPage() {
-  const session = (await getStaffSession())!
+  const session = await requirePermission()
   const supabase = await createClient()
   const today = localDate()
   const from = addDays(today, -(CHART_DAYS - 1))
@@ -31,7 +32,7 @@ export default async function DashboardPage() {
       .lte('stock', 2)
       .order('stock')
       .limit(10),
-    session.role === 'owner' ? supabase.rpc('sales_report', { p_from: from, p_to: today }) : null,
+    hasPermission(session, 'reports') ? supabase.rpc('sales_report', { p_from: from, p_to: today }) : null,
   ])
 
   const profitByDay = new Map(
@@ -71,7 +72,7 @@ export default async function DashboardPage() {
             {orders.length} ບິນ · ອອນລາຍ {online}
           </p>
         </div>
-        {session.role === 'owner' && (
+        {hasPermission(session, 'reports') && (
           <div className="card p-4">
             <p className="text-sm text-muted">ກຳໄລມື້ນີ້</p>
             <p className="text-xl font-bold text-success">{formatKip(profit)}</p>
@@ -86,7 +87,7 @@ export default async function DashboardPage() {
       <section className="card p-4">
         <div className="mb-3 flex items-center justify-between">
           <h2 className="font-bold text-navy">ຍອດຂາຍ {CHART_DAYS} ມື້ຫຼ້າສຸດ</h2>
-          {session.role === 'owner' && (
+          {hasPermission(session, 'reports') && (
             <Link href="/admin/reports" className="text-sm text-navy-soft">
               ລາຍງານລະອຽດ →
             </Link>

@@ -1,13 +1,14 @@
+import { hasPermission } from '@/lib/permissions'
 import Link from 'next/link'
 import { ProductForm } from '@/components/admin/product-form'
 import { ArrowLeftIcon } from '@/components/icons'
 import { normalizeBarcode } from '@/lib/barcode'
-import { createClient, getStaffSession } from '@/lib/supabase/server'
+import { createClient, requirePermission } from '@/lib/supabase/server'
 import type { Category, DeviceModel } from '@/lib/types'
 
 export default async function NewProductPage(props: PageProps<'/admin/products/new'>) {
   const { barcode } = await props.searchParams
-  const session = (await getStaffSession())!
+  const session = await requirePermission('products')
   const supabase = await createClient()
   const [{ data: categories }, { data: models }] = await Promise.all([
     supabase.from('categories').select('*').order('sort'),
@@ -24,7 +25,7 @@ export default async function NewProductPage(props: PageProps<'/admin/products/n
         categories={(categories as Category[]) ?? []}
         models={(models as DeviceModel[]) ?? []}
         costs={{}}
-        isOwner={session.role === 'owner'}
+        isOwner={hasPermission(session, 'reports')}
         initialBarcode={typeof barcode === 'string' ? normalizeBarcode(barcode) : ''}
       />
     </div>

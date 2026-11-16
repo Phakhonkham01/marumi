@@ -1,15 +1,16 @@
+import { hasPermission } from '@/lib/permissions'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { ArrowLeftIcon, ChatIcon, PhoneIcon } from '@/components/icons'
 import { formatDateTime } from '@/lib/dates'
 import { formatKip, PAYMENT_LABEL, STATUS_LABEL, STATUS_STYLE } from '@/lib/format'
-import { createClient, getStaffSession } from '@/lib/supabase/server'
+import { createClient, requirePermission } from '@/lib/supabase/server'
 import type { Order, OrderItem } from '@/lib/types'
 import { OrderActions } from './order-actions'
 
 export default async function OrderPage(props: PageProps<'/admin/orders/[id]'>) {
   const { id } = await props.params
-  const session = (await getStaffSession())!
+  const session = await requirePermission('orders')
   const supabase = await createClient()
 
   const [{ data: order }, { data: items }] = await Promise.all([
@@ -21,7 +22,7 @@ export default async function OrderPage(props: PageProps<'/admin/orders/[id]'>) 
   const lines = (items as OrderItem[]) ?? []
 
   let costs = new Map<number, number>()
-  if (session.role === 'owner' && lines.length) {
+  if (hasPermission(session, 'reports') && lines.length) {
     const { data } = await supabase
       .from('order_item_costs')
       .select('order_item_id, unit_cost_lak')
@@ -91,7 +92,7 @@ export default async function OrderPage(props: PageProps<'/admin/orders/[id]'>) 
             <p className="flex justify-between text-base font-bold text-navy">
               <span>ລວມ</span> <span>{formatKip(o.total_lak)}</span>
             </p>
-            {session.role === 'owner' && costs.size > 0 && (
+            {hasPermission(session, 'reports') && costs.size > 0 && (
               <p className="flex justify-between text-success">
                 <span>ກຳໄລ</span> <span>{formatKip(o.total_lak - totalCost)}</span>
               </p>
@@ -115,7 +116,7 @@ export default async function OrderPage(props: PageProps<'/admin/orders/[id]'>) 
         </section>
       )}
 
-      <OrderActions orderId={o.id} status={o.status} />
+      <OrderActions orderId={o.id} status={o.status} canCancel={hasPermission(session, 'cancel')} />
     </div>
   )
 }

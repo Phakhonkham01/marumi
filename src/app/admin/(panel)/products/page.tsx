@@ -1,18 +1,19 @@
+import { hasPermission } from '@/lib/permissions'
 import Image from 'next/image'
 import Link from 'next/link'
 import { BoxIcon, EditIcon, PlusIcon } from '@/components/icons'
 import { formatDateTime } from '@/lib/dates'
 import { formatKip, imageUrl, minPrice, sortedImages } from '@/lib/format'
 import { getCategories } from '@/lib/queries'
-import { createClient, getStaffSession } from '@/lib/supabase/server'
+import { createClient, requirePermission } from '@/lib/supabase/server'
 import { PRODUCT_SELECT, type ProductWithRelations } from '@/lib/types'
 
 export default async function AdminProductsPage(props: PageProps<'/admin/products'>) {
   const sp = await props.searchParams
   const q = typeof sp.q === 'string' ? sp.q.trim() : ''
   const categoryId = Number(sp.category) || undefined
-  const session = (await getStaffSession())!
-  const isOwner = session.role === 'owner'
+  const session = await requirePermission('products')
+  const isOwner = hasPermission(session, 'reports')
   const supabase = await createClient()
 
   let query = supabase.from('products').select(PRODUCT_SELECT).order('created_at', { ascending: false })

@@ -3,10 +3,11 @@ import { notFound } from 'next/navigation'
 import { PrintButton, Receipt, ReceiptPageStyle } from '@/components/admin/receipt'
 import { CashIcon, ChartIcon } from '@/components/icons'
 import { fetchReceipt } from '@/lib/receipt'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, requirePermission } from '@/lib/supabase/server'
 
 /** Paper receipt for one bill; the POS opens this right after payment. */
 export default async function ReceiptPage(props: PageProps<'/admin/receipt/[code]'>) {
+  await requirePermission('pos', 'sales', 'orders')
   const { code } = await props.params
   const data = await fetchReceipt(await createClient(), decodeURIComponent(code))
   if (!data) notFound()

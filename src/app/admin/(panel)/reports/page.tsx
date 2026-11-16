@@ -1,6 +1,6 @@
 import { addDays, localDate } from '@/lib/dates'
 import { formatKip } from '@/lib/format'
-import { createClient, getStaffSession } from '@/lib/supabase/server'
+import { createClient, requirePermission } from '@/lib/supabase/server'
 
 type DayRow = { day: string; order_count: number; revenue_lak: number; cost_lak: number; profit_lak: number }
 type TopRow = { product_name: string; qty: number; revenue_lak: number; profit_lak: number }
@@ -13,10 +13,7 @@ const RANGES = [
 ]
 
 export default async function ReportsPage(props: PageProps<'/admin/reports'>) {
-  const session = (await getStaffSession())!
-  if (session.role !== 'owner') {
-    return <p className="text-muted">ໜ້ານີ້ສະເພາະເຈົ້າຂອງຮ້ານ</p>
-  }
+  await requirePermission('reports')
 
   const sp = await props.searchParams
   const days = RANGES.find((r) => String(r.days) === sp.days)?.days ?? 30

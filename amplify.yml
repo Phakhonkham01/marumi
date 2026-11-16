@@ -10,6 +10,8 @@ frontend:
         - pnpm install --frozen-lockfile
     build:
       commands:
+        # Server-only secret from Amplify environment variables (staff accounts).
+        - echo "SUPABASE_SERVICE_ROLE_KEY=$SUPABASE_SERVICE_ROLE_KEY" >> .env.production
         - pnpm build
   artifacts:
     baseDirectory: .next

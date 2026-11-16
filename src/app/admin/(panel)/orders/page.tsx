@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { formatDateTime } from '@/lib/dates'
 import { ReceiptIcon } from '@/components/icons'
 import { formatKip, PAYMENT_LABEL, STATUS_LABEL, STATUS_STYLE } from '@/lib/format'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, requirePermission } from '@/lib/supabase/server'
 import type { Order, OrderStatus } from '@/lib/types'
 
 const TABS: { value: OrderStatus | 'all'; label: string }[] = [
@@ -14,6 +14,7 @@ const TABS: { value: OrderStatus | 'all'; label: string }[] = [
 ]
 
 export default async function OrdersPage(props: PageProps<'/admin/orders'>) {
+  await requirePermission('orders')
   const sp = await props.searchParams
   const status = (TABS.find((t) => t.value === sp.status)?.value ?? 'pending') as OrderStatus | 'all'
   const supabase = await createClient()

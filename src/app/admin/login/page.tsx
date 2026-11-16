@@ -5,12 +5,20 @@ import Link from 'next/link'
 import { useState } from 'react'
 import { useDialog } from '@/components/dialog'
 import { ArrowLeftIcon, EyeIcon, EyeOffIcon } from '@/components/icons'
+import { normalizePhone, staffEmail } from '@/lib/permissions'
 import { createClient } from '@/lib/supabase/client'
 
 const LOGIN_ERRORS: Record<string, string> = {
-  invalid_credentials: 'ອີເມວ ຫຼື ລະຫັດຜ່ານບໍ່ຖືກຕ້ອງ',
+  invalid_credentials: 'ເບີໂທ/ອີເມວ ຫຼື ລະຫັດຜ່ານບໍ່ຖືກຕ້ອງ',
   email_not_confirmed: 'ບັນຊີນີ້ຍັງບໍ່ໄດ້ຢືນຢັນອີເມວ (ໃນ Supabase ໃຫ້ກົດ Confirm user)',
   over_request_rate_limit: 'ລອງຫຼາຍເທື່ອເກີນໄປ ກະລຸນາລໍຖ້າຈັກໜ້ອຍ',
+  user_banned: 'ບັນຊີນີ້ຖືກປິດແລ້ວ ກະລຸນາຕິດຕໍ່ເຈົ້າຂອງຮ້ານ',
+}
+
+/** Staff type a phone number; the owner can still type an email. */
+function loginEmail(input: string) {
+  const value = input.trim()
+  return value.includes('@') ? value : staffEmail(normalizePhone(value))
 }
 
 export default function LoginPage() {
@@ -23,7 +31,7 @@ export default function LoginPage() {
     const form = new FormData(e.currentTarget)
     setPending(true)
     const { error } = await createClient().auth.signInWithPassword({
-      email: String(form.get('email')).trim(),
+      email: loginEmail(String(form.get('login'))),
       password: String(form.get('password')),
     })
     if (error) {
@@ -44,8 +52,8 @@ export default function LoginPage() {
           <h1 className="text-xl font-bold text-navy">Marumi ຫຼັງບ້ານ</h1>
         </div>
         <div>
-          <label className="label" htmlFor="email">ອີເມວ</label>
-          <input id="email" name="email" type="email" className="input" required autoComplete="email" />
+          <label className="label" htmlFor="login">ເບີໂທ ຫຼື ອີເມວ</label>
+          <input id="login" name="login" type="text" className="input" required autoComplete="username" placeholder="020 5555 1234" />
         </div>
         <div>
           <label className="label" htmlFor="password">ລະຫັດຜ່ານ</label>

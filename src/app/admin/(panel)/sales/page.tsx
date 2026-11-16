@@ -3,7 +3,7 @@ import { connection } from 'next/server'
 import { ChartIcon, SearchIcon } from '@/components/icons'
 import { addDays, localDate, startOfLocalDay } from '@/lib/dates'
 import { formatKip } from '@/lib/format'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, requirePermission } from '@/lib/supabase/server'
 import { SalesTable, type SaleRow } from './sales-table'
 
 const LIMIT = 5000
@@ -38,6 +38,7 @@ const longDate = (day: string) =>
   )
 
 export default async function SalesPage(props: PageProps<'/admin/sales'>) {
+  await requirePermission('sales')
   const sp = await props.searchParams
   await connection() // "today" must be worked out per request
   const one = (v: string | string[] | undefined) => (typeof v === 'string' ? v : '')

@@ -1,3 +1,4 @@
+import { hasPermission } from '@/lib/permissions'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { ProductForm } from '@/components/admin/product-form'
@@ -5,7 +6,7 @@ import { StockPanel } from '@/components/admin/stock-panel'
 import { ArrowLeftIcon, PrinterIcon } from '@/components/icons'
 import { formatDateTime } from '@/lib/dates'
 import { getCategories, getDeviceModels } from '@/lib/queries'
-import { createClient, getStaffSession } from '@/lib/supabase/server'
+import { createClient, requirePermission } from '@/lib/supabase/server'
 import { ADMIN_PRODUCT_SELECT, type ProductWithRelations } from '@/lib/types'
 
 const REASON_LABEL: Record<string, string> = {
@@ -19,8 +20,8 @@ type Movement = { id: number; variant_id: number; delta: number; reason: string;
 
 export default async function EditProductPage(props: PageProps<'/admin/products/[id]'>) {
   const { id } = await props.params
-  const session = (await getStaffSession())!
-  const isOwner = session.role === 'owner'
+  const session = await requirePermission('products')
+  const isOwner = hasPermission(session, 'reports')
   const supabase = await createClient()
 
   const productId = Number(id)

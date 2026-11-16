@@ -1,10 +1,11 @@
-import { createClient, getStaffSession } from '@/lib/supabase/server'
+import { hasPermission } from '@/lib/permissions'
+import { createClient, requirePermission } from '@/lib/supabase/server'
 import { ADMIN_PRODUCT_SELECT, type ProductWithRelations } from '@/lib/types'
 import { ReceiveTerminal } from './receive-terminal'
 
 export default async function ReceivePage() {
-  const session = (await getStaffSession())!
-  const isOwner = session.role === 'owner'
+  const session = await requirePermission('receive')
+  const isOwner = hasPermission(session, 'reports')
   const supabase = await createClient()
   const [{ data }, { data: costRows }] = await Promise.all([
     supabase.from('products').select(ADMIN_PRODUCT_SELECT).order('name'),

@@ -21,11 +21,11 @@ const NEXT: Record<OrderStatus, { to: OrderStatus; label: string; style: string;
   cancelled: [],
 }
 
-export function OrderActions({ orderId, status }: { orderId: number; status: OrderStatus }) {
+export function OrderActions({ orderId, status, canCancel }: { orderId: number; status: OrderStatus; canCancel: boolean }) {
   const router = useRouter()
   const dialog = useDialog()
   const [busy, setBusy] = useState(false)
-  const actions = NEXT[status]
+  const actions = NEXT[status].filter((a) => canCancel || a.to !== 'cancelled')
   if (actions.length === 0) return null
 
   async function go(to: OrderStatus, confirmText?: string) {

@@ -2,78 +2,98 @@
 
 import Link from 'next/link'
 import { AppShell, FullscreenButton, TopClock, type MenuSection } from '@/components/app-shell'
-import { BellIcon, LogoutIcon, UserIcon } from '@/components/icons'
+import { BellIcon, LogoutIcon } from '@/components/icons'
+import { hasPermission, type Permission, type Role } from '@/lib/permissions'
+import { Avatar } from './avatar'
 import { createClient } from '@/lib/supabase/client'
 
-function adminMenu(role: 'owner' | 'staff', pending: number): MenuSection[] {
-  return [
+type Item = MenuSection[number] & { need?: Permission }
+
+/** The side menu, showing only what this person may use. */
+function adminMenu(user: { role: Role; permissions: Permission[] }, pending: number): MenuSection[] {
+  const allowed = (i: { need?: Permission }) => !i.need || hasPermission(user, i.need)
+  const sections: Item[][] = [
     [
       { label: 'ແຜງຄວບຄຸມ', href: '/admin', icon: 'grid' },
-      { label: 'ຂາຍໜ້າຮ້ານ', href: '/admin/pos', icon: 'cash' },
-      { label: 'ຮັບສິນຄ້າເຂົ້າ', href: '/admin/receive', icon: 'box' },
-      { label: 'ອໍເດີ', href: '/admin/orders', icon: 'receipt', badge: pending },
-      { label: 'ຍອດຂາຍ', href: '/admin/sales', icon: 'chart' },
+      { label: 'ຂາຍໜ້າຮ້ານ', href: '/admin/pos', icon: 'cash', need: 'pos' },
+      { label: 'ຮັບສິນຄ້າເຂົ້າ', href: '/admin/receive', icon: 'box', need: 'receive' },
+      { label: 'ອໍເດີ', href: '/admin/orders', icon: 'receipt', badge: pending, need: 'orders' },
+      { label: 'ຍອດຂາຍ', href: '/admin/sales', icon: 'chart', need: 'sales' },
     ],
     [
       {
         label: 'ຈັດການສິນຄ້າ',
         href: '#products',
         icon: 'box',
-        children: [
-          { label: 'ລາຍການສິນຄ້າ', href: '/admin/products' },
-          { label: 'ເພີ່ມສິນຄ້າໃໝ່', href: '/admin/products/new' },
-          { label: 'ພິມສະຕິກເກີບາໂຄ້ດ', href: '/admin/labels' },
-          { label: 'ໝວດ & ລຸ້ນໂທລະສັບ', href: '/admin/settings' },
-        ],
+        children: (
+          [
+            { label: 'ລາຍການສິນຄ້າ', href: '/admin/products', need: 'products' },
+            { label: 'ເພີ່ມສິນຄ້າໃໝ່', href: '/admin/products/new', need: 'products' },
+            { label: 'ພິມສະຕິກເກີບາໂຄ້ດ', href: '/admin/labels', need: 'labels' },
+            { label: 'ໝວດ & ລຸ້ນໂທລະສັບ', href: '/admin/settings', need: 'products' },
+          ] as (MenuLinkItem & { need?: Permission })[]
+        ).filter(allowed),
       },
-      ...(role === 'owner' ? [{ label: 'ລາຍງານ', href: '/admin/reports', icon: 'chart' as const }] : []),
+      { label: 'ລາຍງານ', href: '/admin/reports', icon: 'chart', need: 'reports' },
+      { label: 'ພະນັກງານ', href: '/admin/staff', icon: 'users', need: 'staff' },
+      { label: 'ໂປຣໄຟລ໌ຂອງຂ້ອຍ', href: '/admin/profile', icon: 'user' },
     ],
     [{ label: 'ເບິ່ງໜ້າຮ້ານ', href: '/', icon: 'store', external: true }],
   ]
+  return sections.map((items) => items.filter(allowed).filter((i) => !i.children || i.children.length > 0))
 }
+
+type MenuLinkItem = NonNullable<MenuSection[number]['children']>[number]
 
 export function AdminShell({
   name,
   role,
+  permissions,
+  avatarUrl,
   pending,
   children,
 }: {
   name: string
-  role: 'owner' | 'staff'
+  role: Role
+  permissions: Permission[]
+  avatarUrl: string | null
   pending: number
   children: React.ReactNode
 }) {
+  const canOrders = hasPermission({ role, permissions }, 'orders')
   return (
     <AppShell
       brand="Marumi"
       brandHref="/admin"
-      sections={adminMenu(role, pending)}
+      sections={adminMenu({ role, permissions }, pending)}
       exact={['/admin']}
       fallbackTitle="ຫຼັງບ້ານ"
       topRight={
         <>
           <TopClock />
           <FullscreenButton />
-          <Link
-            href="/admin/orders?status=pending"
-            className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white text-navy hover:bg-butter"
-            aria-label={`ອໍເດີລໍຖ້າຢືນຢັນ ${pending}`}
-          >
-            <BellIcon size={20} />
-            {pending > 0 && (
-              <span className="absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-blush px-1 text-xs font-bold text-white">
-                {pending}
-              </span>
-            )}
-          </Link>
+          {canOrders && (
+            <Link
+              href="/admin/orders?status=pending"
+              className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white text-navy hover:bg-butter"
+              aria-label={`ອໍເດີລໍຖ້າຢືນຢັນ ${pending}`}
+            >
+              <BellIcon size={20} />
+              {pending > 0 && (
+                <span className="absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-blush px-1 text-xs font-bold text-white">
+                  {pending}
+                </span>
+              )}
+            </Link>
+          )}
           <span className="hidden h-8 w-px bg-white/30 sm:block" />
-          <span className="hidden text-right leading-tight sm:block">
-            <span className="block font-bold">Hi! {name}</span>
-            <span className="block text-xs text-white/70">{role === 'owner' ? 'ເຈົ້າຂອງຮ້ານ' : 'ພະນັກງານ'}</span>
-          </span>
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-navy">
-            <UserIcon size={22} />
-          </span>
+          <Link href="/admin/profile" className="flex items-center gap-3 rounded-lg hover:opacity-90" aria-label="ໂປຣໄຟລ໌ຂອງຂ້ອຍ">
+            <span className="hidden text-right leading-tight sm:block">
+              <span className="block font-bold">Hi! {name}</span>
+              <span className="block text-xs text-white/70">{role === 'owner' ? 'ເຈົ້າຂອງຮ້ານ' : 'ພະນັກງານ'}</span>
+            </span>
+            <Avatar url={avatarUrl} name={name} size={40} className="ring-2 ring-white" />
+          </Link>
         </>
       }
       sidebarFooter={

@@ -1,9 +1,10 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, requirePermission } from '@/lib/supabase/server'
 import { ADMIN_PRODUCT_SELECT, type ProductWithRelations } from '@/lib/types'
 import { LabelSheet } from './label-sheet'
 
 /** Barcode sticker printing. `?items=12:5,13:2` preselects variant 12 ×5 and 13 ×2. */
 export default async function LabelsPage(props: PageProps<'/admin/labels'>) {
+  await requirePermission('labels')
   const { items } = await props.searchParams
   const supabase = await createClient()
   const { data } = await supabase.from('products').select(ADMIN_PRODUCT_SELECT).order('name')

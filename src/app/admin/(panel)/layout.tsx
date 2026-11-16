@@ -31,7 +31,7 @@ async function Gate({ children }: { children: React.ReactNode }) {
     )
   }
   return (
-    <AdminShell name={session.name} role={session.role} pending={pending.count ?? 0}>
+    <AdminShell name={session.name} role={session.role} permissions={session.permissions} avatarUrl={session.avatarUrl} pending={pending.count ?? 0}>
       {children}
     </AdminShell>
   )

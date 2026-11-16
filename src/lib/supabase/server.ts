@@ -2,8 +2,10 @@ import 'server-only'
 import { createServerClient } from '@supabase/ssr'
 import { createClient as createAnonClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
+import { redirect } from 'next/navigation'
 import { connection } from 'next/server'
 import { cache } from 'react'
+import { hasPermission, type Permission, type Role } from '@/lib/permissions'
 import { SUPABASE_KEY, SUPABASE_URL } from './env'
 
 /** Session-aware client for admin pages and server actions. */
@@ -41,8 +43,16 @@ export function createCatalogClient() {
   })
 }
 
-export type StaffSession = { userId: string; name: string; role: 'owner' | 'staff' }
+export type StaffSession = {
+  userId: string
+  name: string
+  role: Role
+  permissions: Permission[]
+  phone: string | null
+  avatarUrl: string | null
+}
 
+/** The signed-in staff member, or null when signed out, not staff, or switched off. */
 export const getStaffSession = cache(async (): Promise<StaffSession | null> => {
   const supabase = await createClient()
   const { data } = await supabase.auth.getClaims()
@@ -50,9 +60,24 @@ export const getStaffSession = cache(async (): Promise<StaffSession | null> => {
   if (!userId) return null
   const { data: profile } = await supabase
     .from('profiles')
-    .select('display_name, role')
+    .select('display_name, role, permissions, phone, avatar_url, is_active')
     .eq('id', userId)
     .maybeSingle()
-  if (!profile) return null
-  return { userId, name: profile.display_name, role: profile.role }
+  if (!profile || !profile.is_active) return null
+  return {
+    userId,
+    name: profile.display_name,
+    role: profile.role,
+    permissions: (profile.permissions ?? []) as Permission[],
+    phone: profile.phone,
+    avatarUrl: profile.avatar_url,
+  }
 })
+
+/** Session check for a page: sends people without the permission to the "no access" page. */
+export async function requirePermission(...anyOf: Permission[]) {
+  const session = await getStaffSession()
+  if (!session) redirect('/admin/login')
+  if (anyOf.length && !anyOf.some((key) => hasPermission(session, key))) redirect('/admin/no-access')
+  return session
+}
