@@ -12,6 +12,7 @@ function adminMenu(role: 'owner' | 'staff', pending: number): MenuSection[] {
       { label: 'ຂາຍໜ້າຮ້ານ', href: '/admin/pos', icon: 'cash' },
       { label: 'ຮັບສິນຄ້າເຂົ້າ', href: '/admin/receive', icon: 'box' },
       { label: 'ອໍເດີ', href: '/admin/orders', icon: 'receipt', badge: pending },
+      { label: 'ຍອດຂາຍ', href: '/admin/sales', icon: 'chart' },
     ],
     [
       {

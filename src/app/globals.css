@@ -37,6 +37,22 @@ body {
 }
 
 @layer components {
+  /* Receipt paper with zig-zag torn edges (screen only). */
+  .receipt-paper {
+    -webkit-mask:
+      conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom / 14px 51% repeat-x,
+      conic-gradient(from 135deg at top, #0000, #000 1deg 89deg, #0000 90deg) top / 14px 51% repeat-x;
+    mask:
+      conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom / 14px 51% repeat-x,
+      conic-gradient(from 135deg at top, #0000, #000 1deg 89deg, #0000 90deg) top / 14px 51% repeat-x;
+  }
+  @media print {
+    .receipt-paper {
+      -webkit-mask: none;
+      mask: none;
+    }
+  }
+
 .card {
   background: white;
   border: 1px solid var(--color-line);

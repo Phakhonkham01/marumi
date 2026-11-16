@@ -74,9 +74,12 @@ export const PAYMENT_LABEL: Record<PaymentMethod, string> = {
   cash: 'ເງິນສົດ',
   transfer: 'ໂອນ (BCEL One)',
   cod: 'ເກັບເງິນປາຍທາງ',
+  mixed: 'ເງິນສົດ + ໂອນ',
 }
 
 const ERROR_LABEL: Record<string, string> = {
+  invalid_split: 'ຍອດໂອນຕ້ອງຫຼາຍກວ່າ 0 ແລະ ໜ້ອຍກວ່າຍອດທີ່ຕ້ອງຊຳລະ',
+  cash_too_low: 'ເງິນທີ່ຮັບມາໜ້ອຍກວ່າຍອດທີ່ຕ້ອງຊຳລະ',
   invalid_name: 'ກະລຸນາໃສ່ຊື່ໃຫ້ຖືກຕ້ອງ',
   invalid_phone: 'ເບີໂທບໍ່ຖືກຕ້ອງ',
   address_required: 'ກະລຸນາໃສ່ທີ່ຢູ່ຈັດສົ່ງ',

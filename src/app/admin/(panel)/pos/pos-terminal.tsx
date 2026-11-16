@@ -88,8 +88,10 @@ export function PosTerminal({ products }: { products: ProductWithRelations[] }) 
   const [picking, setPicking] = useState<ProductWithRelations | null>(null)
   const [lines, setLines] = useState<Line[]>([])
   const [discount, setDiscount] = useState('')
-  const [payment, setPayment] = useState<'cash' | 'transfer'>('cash')
+  const [payment, setPayment] = useState<'cash' | 'transfer' | 'mixed'>('cash')
   const [customer, setCustomer] = useState('')
+  const [cash, setCash] = useState('')
+  const [transfer, setTransfer] = useState('')
   const [busy, setBusy] = useState(false)
   const [done, setDone] = useState<string | null>(null)
   const linesRef = useRef<HTMLDivElement>(null)
@@ -112,6 +114,17 @@ export function PosTerminal({ products }: { products: ProductWithRelations[] }) 
   )
   const subtotal = lines.reduce((n, l) => n + l.qty * l.price, 0)
   const discountValue = Math.min(subtotal, Math.max(0, Number(discount.replace(/[,\s]/g, '')) || 0))
+  const due = subtotal - discountValue
+  // Cash + transfer: the transfer part is typed in, the rest is paid in cash.
+  const transferValue = payment === 'mixed' ? Number(transfer) || 0 : 0
+  const splitInvalid = payment === 'mixed' && (transferValue <= 0 || transferValue >= due)
+  const cashDue = payment === 'mixed' ? Math.max(0, due - transferValue) : due
+  // Cash handed over by the customer (optional); the change is shown and printed on the receipt.
+  const cashValue = payment !== 'transfer' && cash ? Number(cash) : null
+  const cashShort = cashValue !== null && cashValue < cashDue
+  const cashSuggestions = [
+    ...new Set([10_000, 50_000, 100_000].map((step) => Math.ceil(cashDue / step) * step).filter((v) => v > cashDue)),
+  ]
 
   const itemCount = lines.reduce((n, l) => n + l.qty, 0)
 
@@ -196,6 +209,8 @@ export function PosTerminal({ products }: { products: ProductWithRelations[] }) 
     setLines([])
     setDiscount('')
     setCustomer('')
+    setCash('')
+    setTransfer('')
   }
 
   async function checkout() {
@@ -206,6 +221,8 @@ export function PosTerminal({ products }: { products: ProductWithRelations[] }) 
       p_payment: payment,
       p_discount_lak: discountValue,
       p_customer_name: customer || null,
+      p_cash_received_lak: cashValue,
+      p_transfer_lak: payment === 'mixed' ? transferValue : null,
     })
     setBusy(false)
     if (error) return dialog.alert({ tone: 'error', title: 'ບັນທຶກການຂາຍບໍ່ສຳເລັດ', message: errorMessage(error.message) })
@@ -214,8 +231,11 @@ export function PosTerminal({ products }: { products: ProductWithRelations[] }) 
     setLines([])
     setDiscount('')
     setCustomer('')
+    setCash('')
+    setTransfer('')
     await refreshCatalog()
-    router.refresh()
+    // Straight to the paper receipt, ready to print.
+    router.push(`/admin/receipt/${encodeURIComponent(data as string)}`)
   }
 
   return (
@@ -390,21 +410,79 @@ export function PosTerminal({ products }: { products: ProductWithRelations[] }) 
               <span>ຍອດທີ່ຕ້ອງຊຳລະ</span> <span>{formatKip(subtotal - discountValue)}</span>
             </p>
           </div>
-          <div className="grid grid-cols-2 gap-2">
-            {(['cash', 'transfer'] as const).map((m) => (
+          <div className="grid grid-cols-3 gap-2">
+            {(['cash', 'transfer', 'mixed'] as const).map((m) => (
               <button
                 key={m}
                 onClick={() => setPayment(m)}
-                className={`rounded-md py-3 font-bold ${payment === m ? 'bg-navy text-white' : 'border-[1.5px] border-line bg-white text-navy'}`}
+                className={`rounded-md px-1 py-3 text-sm font-bold sm:text-base ${payment === m ? 'bg-navy text-white' : 'border-[1.5px] border-line bg-white text-navy'}`}
               >
-                {m === 'cash' ? 'ເງິນສົດ' : 'ໂອນ'}
+                {m === 'cash' ? 'ເງິນສົດ' : m === 'transfer' ? 'ໂອນ' : 'ສົດ + ໂອນ'}
               </button>
             ))}
           </div>
+          {payment === 'mixed' && (
+            <div className="space-y-2 rounded-md border-[1.5px] border-line bg-white p-2.5">
+              <div className="flex items-center gap-2">
+                <label htmlFor="transfer" className="w-20 shrink-0 text-sm font-semibold text-navy">
+                  ຍອດໂອນ
+                </label>
+                <input
+                  id="transfer"
+                  className="input text-right font-bold"
+                  inputMode="numeric"
+                  value={transfer ? Number(transfer).toLocaleString('en-US') : ''}
+                  onChange={(e) => setTransfer(e.target.value.replace(/[^\d]/g, '').slice(0, 10))}
+                  placeholder="ຈຳນວນທີ່ໂອນ"
+                />
+              </div>
+              <p className={`flex justify-between text-sm font-bold ${splitInvalid && transfer ? 'text-danger' : 'text-navy'}`}>
+                <span>{splitInvalid && transfer ? 'ຍອດໂອນຕ້ອງໜ້ອຍກວ່າຍອດຊຳລະ' : 'ຈ່າຍເງິນສົດອີກ'}</span>
+                <span>{splitInvalid && transfer ? '' : formatKip(cashDue)}</span>
+              </p>
+            </div>
+          )}
+          {payment !== 'transfer' && !(payment === 'mixed' && splitInvalid) && (
+            <div className="space-y-2 rounded-md border-[1.5px] border-line bg-white p-2.5">
+              <div className="flex items-center gap-2">
+                <label htmlFor="cash" className="w-20 shrink-0 text-sm font-semibold text-navy">
+                  ຮັບເງິນມາ
+                </label>
+                <input
+                  id="cash"
+                  className="input text-right font-bold"
+                  inputMode="numeric"
+                  value={cash ? Number(cash).toLocaleString('en-US') : ''}
+                  onChange={(e) => setCash(e.target.value.replace(/[^\d]/g, '').slice(0, 10))}
+                  placeholder="ບໍ່ບັງຄັບ"
+                />
+              </div>
+              {cashDue > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {[cashDue, ...cashSuggestions].map((v, i) => (
+                    <button
+                      key={v}
+                      type="button"
+                      onClick={() => setCash(String(v))}
+                      className="rounded-md bg-mist px-2.5 py-1 text-xs font-semibold text-navy hover:bg-butter"
+                    >
+                      {i === 0 ? 'ພໍດີ' : v.toLocaleString('en-US')}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {cashValue !== null && (
+                <p className={`flex justify-between text-sm font-bold ${cashShort ? 'text-danger' : 'text-success'}`}>
+                  <span>{cashShort ? 'ເງິນບໍ່ພໍ ຂາດອີກ' : 'ເງິນທອນ'}</span>
+                  <span>{formatKip(Math.abs(cashValue - cashDue))}</span>
+                </p>
+              )}
+            </div>
+          )}
           <button
             className="flex w-full items-center justify-center gap-2 rounded-md bg-butter py-3.5 text-lg font-bold text-navy hover:bg-butter-deep disabled:opacity-50"
             onClick={checkout}
-            disabled={busy || lines.length === 0}
+            disabled={busy || lines.length === 0 || cashShort || splitInvalid}
           >
             <CashIcon size={22} /> {busy ? 'ກຳລັງບັນທຶກ...' : 'ຊຳລະເງິນ'}
           </button>

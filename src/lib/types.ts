@@ -42,7 +42,7 @@ export type ProductWithRelations = Product & {
 
 export type OrderStatus = 'pending' | 'confirmed' | 'completed' | 'cancelled'
 export type OrderChannel = 'online' | 'store'
-export type PaymentMethod = 'cash' | 'transfer' | 'cod'
+export type PaymentMethod = 'cash' | 'transfer' | 'cod' | 'mixed'
 
 export type Order = {
   id: number
@@ -59,7 +59,12 @@ export type Order = {
   subtotal_lak: number
   discount_lak: number
   total_lak: number
+  cash_received_lak?: number | null
+  /** Transfer part of a 'mixed' (cash + transfer) payment. */
+  transfer_lak?: number | null
+  created_by?: string | null
   created_at: string
+  confirmed_at?: string | null
 }
 
 export type OrderItem = {
