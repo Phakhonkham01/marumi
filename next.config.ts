@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
+import pkg from "./package.json";
 
 const nextConfig: NextConfig = {
+  // Shown on the login page. Bump "version" in package.json with each release.
+  env: { NEXT_PUBLIC_APP_VERSION: pkg.version },
   cacheComponents: true,
   partialPrefetching: true,
   // Product photos are compressed in the browser before upload, so skip

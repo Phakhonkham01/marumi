@@ -56,6 +56,7 @@ export default function LoginPage() {
         <Link href="/" className="btn btn-ghost w-full">
           <ArrowLeftIcon size={18} /> ກັບໄປໜ້າຮ້ານ
         </Link>
+        <p className="text-center text-xs text-muted">ເວີຊັນ {process.env.NEXT_PUBLIC_APP_VERSION}</p>
       </form>
     </div>
   )
