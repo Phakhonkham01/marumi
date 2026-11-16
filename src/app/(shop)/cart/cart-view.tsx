@@ -118,32 +118,39 @@ export function CartView({ shop }: { shop: ShopSettings | null }) {
       <section className="space-y-3">
         <h1 className="page-bar">ກະຕ່າສິນຄ້າ</h1>
         {notice && <p className="rounded-2xl bg-butter/60 px-4 py-3 text-sm">{notice}</p>}
-        {items.map((item) => (
-          <div key={item.variantId} className="card flex gap-3 p-3">
-            <Link href={`/p/${item.slug}`} className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-mist">
-              <Image src={imageUrl(item.image)} alt="" fill sizes="80px" className="object-cover" />
-            </Link>
-            <div className="flex min-w-0 flex-1 flex-col">
-              <p className="truncate font-semibold">{item.productName}</p>
-              {item.variantName !== 'ມາດຕະຖານ' && <p className="text-sm text-muted">{item.variantName}</p>}
-              <p className="text-sm font-bold text-navy">{formatKip(item.price)}</p>
-              <div className="mt-auto flex items-center justify-between pt-1">
-                <div className="flex items-center rounded-full border-[1.5px] border-line">
-                  <button className="flex h-11 w-11 items-center justify-center" onClick={() => setQty(item.variantId, item.qty - 1)} aria-label="ຫຼຸດ">
+        {/* Two cards per row on phones (three on wide screens) so more of the cart fits on screen. */}
+        <div className="grid grid-cols-2 gap-3 xl:grid-cols-3">
+          {items.map((item) => (
+            <div key={item.variantId} className="card flex flex-col overflow-hidden">
+              <div className="relative aspect-square w-full bg-mist">
+                <Link href={`/p/${item.slug}`} className="absolute inset-0" aria-label={item.productName}>
+                  <Image src={imageUrl(item.image)} alt="" fill sizes="(min-width: 1280px) 20vw, 50vw" className="object-cover" />
+                </Link>
+                <button
+                  className="absolute right-1.5 top-1.5 flex h-10 w-10 items-center justify-center rounded-full bg-white/95 text-danger shadow"
+                  onClick={() => remove(item.variantId)}
+                  aria-label={`ລຶບ ${item.productName}`}
+                >
+                  <TrashIcon size={18} />
+                </button>
+              </div>
+              <div className="flex flex-1 flex-col gap-1 p-2.5">
+                <p className="line-clamp-2 text-sm font-semibold leading-snug">{item.productName}</p>
+                {item.variantName !== 'ມາດຕະຖານ' && <p className="truncate text-xs text-muted">{item.variantName}</p>}
+                <p className="text-sm font-bold text-navy">{formatKip(item.price)}</p>
+                <div className="mt-auto flex items-center rounded-full border-[1.5px] border-line">
+                  <button className="flex h-10 flex-1 items-center justify-center" onClick={() => setQty(item.variantId, item.qty - 1)} aria-label="ຫຼຸດ">
                     <MinusIcon size={16} />
                   </button>
                   <span className="w-8 text-center font-semibold">{item.qty}</span>
-                  <button className="flex h-11 w-11 items-center justify-center" onClick={() => setQty(item.variantId, item.qty + 1)} aria-label="ເພີ່ມ">
+                  <button className="flex h-10 flex-1 items-center justify-center" onClick={() => setQty(item.variantId, item.qty + 1)} aria-label="ເພີ່ມ">
                     <PlusIcon size={16} />
                   </button>
                 </div>
-                <button className="flex h-11 w-11 items-center justify-center rounded-full text-danger hover:bg-danger/10" onClick={() => remove(item.variantId)} aria-label="ລຶບ">
-                  <TrashIcon size={20} />
-                </button>
               </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </section>
 
       <form ref={formRef} action={action} className="card h-fit scroll-mt-20 space-y-4 p-5 lg:sticky lg:top-24">
