@@ -107,7 +107,7 @@ export function StaffForm({ initial, grantable, isSelf }: { initial: StaffFormVa
             placeholder="020 5555 1234"
             required={!isOwner}
           />
-          {isOwner && <p className="mt-1 text-xs text-muted">ເຈົ້າຂອງຮ້ານລ໋ອກອິນດ້ວຍອີເມວຄືເກົ່າ</p>}
+          {isOwner && <p className="mt-1 text-xs text-muted">ລ໋ອກອິນໄດ້ທັງອີເມວ ແລະ ເບີໂທນີ້</p>}
         </div>
         <div>
           <label className="label">{isNew ? 'ລະຫັດຜ່ານ' : 'ລະຫັດຜ່ານໃໝ່'}</label>

@@ -5,20 +5,13 @@ import Link from 'next/link'
 import { useState } from 'react'
 import { useDialog } from '@/components/dialog'
 import { ArrowLeftIcon, EyeIcon, EyeOffIcon } from '@/components/icons'
-import { normalizePhone, staffEmail } from '@/lib/permissions'
-import { createClient } from '@/lib/supabase/client'
+import { signIn } from './actions'
 
 const LOGIN_ERRORS: Record<string, string> = {
   invalid_credentials: 'ເບີໂທ/ອີເມວ ຫຼື ລະຫັດຜ່ານບໍ່ຖືກຕ້ອງ',
   email_not_confirmed: 'ບັນຊີນີ້ຍັງບໍ່ໄດ້ຢືນຢັນອີເມວ (ໃນ Supabase ໃຫ້ກົດ Confirm user)',
   over_request_rate_limit: 'ລອງຫຼາຍເທື່ອເກີນໄປ ກະລຸນາລໍຖ້າຈັກໜ້ອຍ',
   user_banned: 'ບັນຊີນີ້ຖືກປິດແລ້ວ ກະລຸນາຕິດຕໍ່ເຈົ້າຂອງຮ້ານ',
-}
-
-/** Staff type a phone number; the owner can still type an email. */
-function loginEmail(input: string) {
-  const value = input.trim()
-  return value.includes('@') ? value : staffEmail(normalizePhone(value))
 }
 
 export default function LoginPage() {
@@ -30,13 +23,11 @@ export default function LoginPage() {
     e.preventDefault()
     const form = new FormData(e.currentTarget)
     setPending(true)
-    const { error } = await createClient().auth.signInWithPassword({
-      email: loginEmail(String(form.get('login'))),
-      password: String(form.get('password')),
-    })
+    // Phone or email; the server works out which account it is.
+    const { error, code } = await signIn(String(form.get('login')), String(form.get('password')))
     if (error) {
       setPending(false)
-      dialog.alert({ tone: 'error', title: 'ເຂົ້າລະບົບບໍ່ສຳເລັດ', message: LOGIN_ERRORS[error.code ?? ''] ?? error.message })
+      dialog.alert({ tone: 'error', title: 'ເຂົ້າລະບົບບໍ່ສຳເລັດ', message: LOGIN_ERRORS[code ?? ''] ?? error })
       return
     }
     // Full page load so the new session cookie is sent and no cached

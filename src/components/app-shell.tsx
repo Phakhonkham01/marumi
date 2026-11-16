@@ -135,6 +135,10 @@ export function AppShell({
             >
               <MenuIcon size={22} />
             </button>
+            {/* On phones the sidebar (with the logo) is hidden, so show the logo here. */}
+            <Link href={brandHref} className="shrink-0 lg:hidden" aria-label={brand}>
+              <Image src="/logo.jpg" alt="" width={40} height={40} className="h-10 w-10 rounded-full ring-2 ring-navy/20" priority />
+            </Link>
             <span className="max-w-[40vw] truncate text-base font-bold sm:text-lg">
               <Suspense fallback={fallbackTitle}>
                 <PageTitle sections={resolveSections ?? (() => sections)} exact={exact} fallback={fallbackTitle} />

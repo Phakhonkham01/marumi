@@ -54,7 +54,9 @@ export function ProfileForm({ name: initialName, phone, avatarUrl, isOwner }: { 
         <div>
           <label className="label" htmlFor="phone">ເບີໂທ {!isOwner && '(ໃຊ້ລ໋ອກອິນ)'}</label>
           <input id="phone" name="phone" type="tel" inputMode="tel" className="input" defaultValue={phone} placeholder="020 5555 1234" required={!isOwner} />
-          {!isOwner && <p className="mt-1 text-xs text-muted">ປ່ຽນເບີໂທແລ້ວ ຄັ້ງໜ້າໃຫ້ລ໋ອກອິນດ້ວຍເບີໃໝ່</p>}
+          <p className="mt-1 text-xs text-muted">
+            {isOwner ? 'ໃສ່ເບີໂທແລ້ວ ລ໋ອກອິນໄດ້ທັງອີເມວ ແລະ ເບີໂທນີ້' : 'ປ່ຽນເບີໂທແລ້ວ ຄັ້ງໜ້າໃຫ້ລ໋ອກອິນດ້ວຍເບີໃໝ່'}
+          </p>
         </div>
         <button className="btn btn-primary" disabled={busy !== null}>
           {busy === 'profile' ? 'ກຳລັງບັນທຶກ...' : 'ບັນທຶກ'}
